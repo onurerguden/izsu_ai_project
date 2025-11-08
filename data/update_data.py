@@ -3,7 +3,6 @@ import json
 import time
 import logging
 from typing import Optional
-
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
@@ -34,13 +33,9 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_data_directory():
-    """Ensure the data directory exists."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    from typing import Optional
-
 def read_last_success_date() -> Optional[datetime.date]:
-    """Read the last successful date from state file."""
     if not STATE_PATH.exists():
         return None
     content = STATE_PATH.read_text(encoding="utf-8").strip()
@@ -54,12 +49,10 @@ def read_last_success_date() -> Optional[datetime.date]:
 
 
 def write_last_success_date(date_obj: datetime.date) -> None:
-    """Write the last successful date to state file."""
     STATE_PATH.write_text(date_obj.strftime("%d.%m.%Y"), encoding="utf-8")
 
 
 def daterange_weeks(start_date: datetime.date, end_date: datetime.date):
-    """Generate dates stepping by 7 days from start_date to end_date inclusive."""
     current = start_date
     while current <= end_date:
         yield current
@@ -67,14 +60,12 @@ def daterange_weeks(start_date: datetime.date, end_date: datetime.date):
 
 
 def sanitize(text: str | None) -> str:
-    """Clean text by removing line breaks and trimming whitespace."""
     if not text:
         return ""
     return str(text).replace("\n", " ").replace("\r", " ").strip()
 
 
 def fetch_points_for_date(date_str: str) -> list[int]:
-    """Fetch analysis point IDs for a given date."""
     try:
         response = requests.post(
             POINTS_ENDPOINT,
@@ -97,7 +88,6 @@ def fetch_points_for_date(date_str: str) -> list[int]:
 
 
 def fetch_analysis_for_point(point_id: int) -> list[dict]:
-    """Fetch analysis results for a given point ID."""
     try:
         response = requests.post(
             DETAIL_ENDPOINT,
@@ -115,7 +105,7 @@ def fetch_analysis_for_point(point_id: int) -> list[dict]:
         rows = []
         for analysis in analyses:
             rows.append({
-                "Tarih": None,  # to be set by caller
+                "Tarih": None,
                 "NoktaAdi": nokta,
                 "ParametreAdi": sanitize(analysis.get("ParametreAdi")),
                 "Birim": sanitize(analysis.get("Birim")),
@@ -129,7 +119,6 @@ def fetch_analysis_for_point(point_id: int) -> list[dict]:
 
 
 def fetch_week_data(date_obj: datetime.date) -> list[dict]:
-    """Fetch and compile all analysis data for a given week date."""
     date_str = date_obj.strftime("%d.%m.%Y")
     point_ids = fetch_points_for_date(date_str)
     if not point_ids:
@@ -147,7 +136,6 @@ def fetch_week_data(date_obj: datetime.date) -> list[dict]:
 
 
 def load_existing_data() -> pd.DataFrame:
-    """Load existing CSV data if available, else return empty DataFrame."""
     if CSV_PATH.exists():
         try:
             return pd.read_csv(CSV_PATH, encoding="utf-8-sig")
@@ -158,7 +146,6 @@ def load_existing_data() -> pd.DataFrame:
 
 
 def save_data(df: pd.DataFrame) -> None:
-    """Save DataFrame to CSV atomically."""
     tmp_path = CSV_PATH.with_suffix(".tmp")
     df.to_csv(tmp_path, index=False, encoding="utf-8-sig")
     tmp_path.replace(CSV_PATH)
@@ -175,8 +162,6 @@ def main():
     if start_date > end_date:
         logger.info("No new data to fetch. Last success date is up to date.")
         return
-
-    # Removed 90-day limit; fetch up to today's date.
 
     logger.info(f"Fetching data from {start_date} to {end_date}")
 
