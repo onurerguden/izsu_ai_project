@@ -50,11 +50,35 @@ LIMITS = {
 
 STATE_NAME = "last_hf_success_date.txt"
 
+PARAM_CANON = {
+    "e.coli": "E.coli",
+    "e coli": "E.coli",
+    "ecoli": "E.coli",
+    "koliform bakteri": "Koliform Bakteri",
+    "c.perfringens": "C.Perfringens",
+}
+
+def canon_param(x: str) -> str:
+    if not isinstance(x, str):
+        return x
+    s = x.strip().lower()
+    s = s.replace("_", " ").replace("-", " ")
+    s = re.sub(r"\s+", " ", s)
+    return PARAM_CANON.get(s, x.strip())
+
+def canon_unit(u: str) -> str:
+    if not isinstance(u, str):
+        return u
+    s = u.strip().replace("µ", "μ")
+    s = s.replace("mL", "ml")
+    s = re.sub(r"\s+", " ", s)
+    return s
+
 def standardize_to(value: float, unit: str, target: str):
     if pd.isna(value) or not isinstance(unit, str):
         return np.nan
-    u = unit.strip().replace("µ", "μ")
-    t = target.strip().replace("µ", "μ")
+    u = canon_unit(unit)
+    t = canon_unit(target)
     if u == t:
         return float(value)
     if (u, t) == ("μg/L", "mg/L"):
@@ -62,6 +86,7 @@ def standardize_to(value: float, unit: str, target: str):
     if (u, t) == ("mg/L", "μg/L"):
         return float(value) * 1000.0
     return np.nan
+
 
 def score_linear_limit(value: float, limit_value: float) -> float:
     if pd.isna(value) or pd.isna(limit_value) or limit_value <= 0:
@@ -89,13 +114,30 @@ def score_acceptable(raw_value: str) -> float:
         return 1.0
     return np.nan
 
+def parse_count_raw(raw: str):
+    """Sayı/100 ml gibi 'count' metrikleri için DegerRaw yedek çözücü."""
+    if not isinstance(raw, str):
+        return np.nan
+    s = raw.strip().lower()
+    if s in {"nd", "yok", "0", "uygun", "geçerli", "gecerli", "-", "—"}:
+        return 0.0
+    m = re.match(r"^<\s*(\d+(\.\d+)?)$", s)
+    if m:
+        # İstersen 0.5*float(...) yapabilirsin; burada en muhafazakârı aldık
+        return float(m.group(1))
+    try:
+        return float(s.replace(",", "."))
+    except:
+        return np.nan
+
 def fail_fast_trigger(param: str, value: float, unit: str) -> bool:
-    if param == "E.coli":
+    p = canon_param(param)
+    if p == "E.coli":
         return (not pd.isna(value)) and value > 0
-    if param == "Arsenik":
+    if p == "Arsenik":
         v = standardize_to(value, unit, "μg/L")
         return (not pd.isna(v)) and v > 10.0
-    if param == "Nitrit":
+    if p == "Nitrit":
         v = standardize_to(value, unit, "mg/L")
         return (not pd.isna(v)) and v > 0.5
     return False
@@ -134,43 +176,61 @@ def read_state_date(path: Path):
             continue
     return None
 
+
 def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
     out_scores, ff = {}, False
     by_param = group_df.groupby("ParametreAdi", dropna=False)
-    for param, sub in by_param:
+
+    for param_raw, sub in by_param:
+        param = canon_param(param_raw)
+
         v = sub["Deger"].astype(float).mean(skipna=True)
-        unit = sub["Birim"].dropna().astype(str).head(1)
-        unit = None if unit.empty else unit.iloc[0].replace("µ", "μ")
-        raw_sample = sub["DegerRaw"].dropna().astype(str).head(1)
-        raw_sample = None if raw_sample.empty else raw_sample.iloc[0]
+
+        unit_series = sub["Birim"].dropna().astype(str).head(1)
+        unit = None if unit_series.empty else canon_unit(unit_series.iloc[0])
+
+        raw_series = sub["DegerRaw"].dropna().astype(str).head(1)
+        raw_sample = None if raw_series.empty else raw_series.iloc[0]
 
         if fail_fast_trigger(param, v, unit or ""):
             ff = True
 
         score = np.nan
+
         if (param, "Sayı/100 ml") in LIMITS:
-            score = 1.0 if (not pd.isna(v) and v == 0) else (0.0 if not pd.isna(v) else np.nan)
+            vv = v if not pd.isna(v) else parse_count_raw(raw_sample if raw_sample is not None else "")
+            if pd.isna(vv):
+                score = np.nan
+            else:
+                score = 1.0 if float(vv) == 0.0 else 0.0
+
         elif (param, "range") in LIMITS:
             lo, hi = LIMITS[(param, "range")]
             score = score_pH(v, lo, hi)
-        elif (param, "µS/cm") in LIMITS:
-            thr = LIMITS[(param, "µS/cm")]
+
+        elif (param, "µS/cm") in LIMITS or (param, "μS/cm") in LIMITS:
+            thr = LIMITS.get((param, "µS/cm"), LIMITS.get((param, "μS/cm")))
             vv = standardize_to(v, unit or "µS/cm", "µS/cm")
             score = score_linear_limit(vv, thr)
+
         elif (param, "mg/L O2") in LIMITS:
             thr = LIMITS[(param, "mg/L O2")]
             vv = v
             score = score_linear_limit(vv, thr)
+
         elif (param, "mg/L") in LIMITS:
             thr = LIMITS[(param, "mg/L")]
             vv = standardize_to(v, unit or "mg/L", "mg/L")
             score = score_linear_limit(vv, thr)
+
         elif (param, "μg/L") in LIMITS:
             thr = LIMITS[(param, "μg/L")]
             vv = standardize_to(v, unit or "μg/L", "μg/L")
             score = score_linear_limit(vv, thr)
+
         elif (param, "acceptable") in LIMITS:
             score = score_acceptable(str(raw_sample) if raw_sample is not None else "")
+
         out_scores[param] = score
 
     num, den = 0.0, 0.0
@@ -181,6 +241,7 @@ def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
             den += w
     hf = np.nan if den == 0 else (100.0 * num / den)
     return {"scores": out_scores, "fail_fast": ff, "hf": hf}
+
 
 def main():
     script_path = Path(__file__).resolve()
@@ -217,6 +278,12 @@ def main():
         print(f"[i] Son HF tarihi: {last_date}")
 
     df = pd.read_csv(in_path, encoding="utf-8-sig")
+
+    if "ParametreAdi" in df.columns:
+        df["ParametreAdi"] = df["ParametreAdi"].apply(canon_param)
+    if "Birim" in df.columns:
+        df["Birim"] = df["Birim"].apply(canon_unit)
+
     df["__Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce").dt.date
     if last_date:
         df = df[df["__Tarih"] > last_date]
@@ -266,7 +333,7 @@ def main():
         state.write_text(max_date.strftime("%Y-%m-%d"), encoding="utf-8")
 
     print("--------------------------------------------------")
-    print("HF & Features (incremental) tamamlandı ✅")
+    print("HF & Features (incremental) tamamlandı")
     print(f"Yeni HF satırı: {len(hf_new)} | Toplam: {len(hf_all)}")
     print(f"Yeni features: {len(features_new)} | Toplam: {len(features_all)}")
     print(f"Son tarih: {max_date}")
