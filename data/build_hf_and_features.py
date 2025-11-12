@@ -6,6 +6,9 @@ import re
 
 ALPHA = 1.2
 
+# -------------------------------
+# Ağırlıklar ve limitler
+# -------------------------------
 WEIGHTS = {
     "E.coli": 0.133,
     "Koliform Bakteri": 0.133,
@@ -50,35 +53,35 @@ LIMITS = {
 
 STATE_NAME = "last_hf_success_date.txt"
 
-PARAM_CANON = {
-    "e.coli": "E.coli",
-    "e coli": "E.coli",
-    "ecoli": "E.coli",
-    "koliform bakteri": "Koliform Bakteri",
-    "c.perfringens": "C.Perfringens",
-}
 
-def canon_param(x: str) -> str:
-    if not isinstance(x, str):
-        return x
-    s = x.strip().lower()
-    s = s.replace("_", " ").replace("-", " ")
-    s = re.sub(r"\s+", " ", s)
-    return PARAM_CANON.get(s, x.strip())
+# -------------------------------
+# Yardımcı fonksiyonlar
+# -------------------------------
+def scoring_param_name(p: str) -> str:
+    """Parametre adını WEIGHTS/LIMITS ile uyumlu hale getir."""
+    if not isinstance(p, str):
+        return ""
+    s = p.strip()
+    low = s.lower()
 
-def canon_unit(u: str) -> str:
-    if not isinstance(u, str):
-        return u
-    s = u.strip().replace("µ", "μ")
-    s = s.replace("mL", "ml")
-    s = re.sub(r"\s+", " ", s)
+    # E. coli varyantları
+    if low.replace(" ", "") in {"e.coli", "ecoli", "e-coli"}:
+        return "E.coli"
+
+    if low == "koliform bakteri":
+        return "Koliform Bakteri"
+    if low == "c.perfringens":
+        return "C.Perfringens"
+
     return s
 
+
 def standardize_to(value: float, unit: str, target: str):
+    """Birim dönüşümü (şimdilik µg/L <-> mg/L)."""
     if pd.isna(value) or not isinstance(unit, str):
         return np.nan
-    u = canon_unit(unit)
-    t = canon_unit(target)
+    u = unit.strip().replace("µ", "μ")
+    t = target.strip().replace("µ", "μ")
     if u == t:
         return float(value)
     if (u, t) == ("μg/L", "mg/L"):
@@ -95,6 +98,7 @@ def score_linear_limit(value: float, limit_value: float) -> float:
     bad = r ** ALPHA
     return 1.0 - bad
 
+
 def score_pH(ph: float, lo: float, hi: float) -> float:
     if pd.isna(ph):
         return np.nan
@@ -106,6 +110,7 @@ def score_pH(ph: float, lo: float, hi: float) -> float:
     r = np.clip(dev / halfwidth, 0.0, 1.0)
     return 1.0 - (r ** ALPHA)
 
+
 def score_acceptable(raw_value: str) -> float:
     if not isinstance(raw_value, str):
         return np.nan
@@ -114,24 +119,10 @@ def score_acceptable(raw_value: str) -> float:
         return 1.0
     return np.nan
 
-def parse_count_raw(raw: str):
-    """Sayı/100 ml gibi 'count' metrikleri için DegerRaw yedek çözücü."""
-    if not isinstance(raw, str):
-        return np.nan
-    s = raw.strip().lower()
-    if s in {"nd", "yok", "0", "uygun", "geçerli", "gecerli", "-", "—"}:
-        return 0.0
-    m = re.match(r"^<\s*(\d+(\.\d+)?)$", s)
-    if m:
-        # İstersen 0.5*float(...) yapabilirsin; burada en muhafazakârı aldık
-        return float(m.group(1))
-    try:
-        return float(s.replace(",", "."))
-    except:
-        return np.nan
 
 def fail_fast_trigger(param: str, value: float, unit: str) -> bool:
-    p = canon_param(param)
+    """HF ne olursa olsun otomatik Risk yapan durumlar."""
+    p = scoring_param_name(param)
     if p == "E.coli":
         return (not pd.isna(value)) and value > 0
     if p == "Arsenik":
@@ -141,6 +132,7 @@ def fail_fast_trigger(param: str, value: float, unit: str) -> bool:
         v = standardize_to(value, unit, "mg/L")
         return (not pd.isna(v)) and v > 0.5
     return False
+
 
 def classify_hf(hf: float, fail_fast: bool) -> str:
     if fail_fast:
@@ -153,7 +145,9 @@ def classify_hf(hf: float, fail_fast: bool) -> str:
         return "Caution"
     return "Risk"
 
-def find_clean_csv(script_path: Path) -> tuple[Path, Path]:
+
+def find_clean_yeni_csv(script_path: Path) -> tuple[Path, Path]:
+    """izsu_data_cleaned_yeni.csv dosyasını bul."""
     script_dir = script_path.parent
     candidates = [
         script_dir / "izsu_data_cleaned.csv",
@@ -163,7 +157,9 @@ def find_clean_csv(script_path: Path) -> tuple[Path, Path]:
     for p in candidates:
         if p.exists():
             return p.parent, p
+    # Hiçbiri yoksa script ile aynı klasörde varsay
     return script_dir, script_dir / "izsu_data_cleaned.csv"
+
 
 def read_state_date(path: Path):
     if not path.exists():
@@ -178,61 +174,71 @@ def read_state_date(path: Path):
 
 
 def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
+    """Tek bir (Tarih, Nokta) grubu için tüm parametre skorlarını ve HF'yi hesapla."""
     out_scores, ff = {}, False
     by_param = group_df.groupby("ParametreAdi", dropna=False)
 
     for param_raw, sub in by_param:
-        param = canon_param(param_raw)
+        p = scoring_param_name(param_raw)
 
-        v = sub["Deger"].astype(float).mean(skipna=True)
+        # Deger_Num zaten numeric, ama gene de to_numeric ile güvence al
+        v = pd.to_numeric(sub["Deger"], errors="coerce").astype(float).mean(skipna=True)
 
-        unit_series = sub["Birim"].dropna().astype(str).head(1)
-        unit = None if unit_series.empty else canon_unit(unit_series.iloc[0])
+        unit_series = sub["Birim"].dropna().astype(str)
+        unit = None if unit_series.empty else unit_series.iloc[0].replace("µ", "μ")
 
-        raw_series = sub["DegerRaw"].dropna().astype(str).head(1)
+        raw_series = sub["DegerRaw"].dropna().astype(str)
         raw_sample = None if raw_series.empty else raw_series.iloc[0]
 
-        if fail_fast_trigger(param, v, unit or ""):
+        # Fail-fast tetikleyici
+        if fail_fast_trigger(p, v, unit or ""):
             ff = True
 
         score = np.nan
 
-        if (param, "Sayı/100 ml") in LIMITS:
-            vv = v if not pd.isna(v) else parse_count_raw(raw_sample if raw_sample is not None else "")
-            if pd.isna(vv):
+        # Sayı/100 ml (E.coli, Koliform, C.perfringens)
+        if (p, "Sayı/100 ml") in LIMITS:
+            if pd.isna(v):
                 score = np.nan
             else:
-                score = 1.0 if float(vv) == 0.0 else 0.0
+                score = 1.0 if float(v) == 0.0 else 0.0
 
-        elif (param, "range") in LIMITS:
-            lo, hi = LIMITS[(param, "range")]
+        # pH aralık
+        elif (p, "range") in LIMITS:
+            lo, hi = LIMITS[(p, "range")]
             score = score_pH(v, lo, hi)
 
-        elif (param, "µS/cm") in LIMITS or (param, "μS/cm") in LIMITS:
-            thr = LIMITS.get((param, "µS/cm"), LIMITS.get((param, "μS/cm")))
+        # İletkenlik
+        elif (p, "µS/cm") in LIMITS or (p, "μS/cm") in LIMITS:
+            thr = LIMITS.get((p, "µS/cm"), LIMITS.get((p, "μS/cm")))
             vv = standardize_to(v, unit or "µS/cm", "µS/cm")
             score = score_linear_limit(vv, thr)
 
-        elif (param, "mg/L O2") in LIMITS:
-            thr = LIMITS[(param, "mg/L O2")]
+        # Oksitlenebilirlik
+        elif (p, "mg/L O2") in LIMITS:
+            thr = LIMITS[(p, "mg/L O2")]
             vv = v
             score = score_linear_limit(vv, thr)
 
-        elif (param, "mg/L") in LIMITS:
-            thr = LIMITS[(param, "mg/L")]
+        # mg/L limitleri
+        elif (p, "mg/L") in LIMITS:
+            thr = LIMITS[(p, "mg/L")]
             vv = standardize_to(v, unit or "mg/L", "mg/L")
             score = score_linear_limit(vv, thr)
 
-        elif (param, "μg/L") in LIMITS:
-            thr = LIMITS[(param, "μg/L")]
+        # μg/L limitleri
+        elif (p, "μg/L") in LIMITS:
+            thr = LIMITS[(p, "μg/L")]
             vv = standardize_to(v, unit or "μg/L", "μg/L")
             score = score_linear_limit(vv, thr)
 
-        elif (param, "acceptable") in LIMITS:
+        # "Uygun / Geçerli" tipi parametreler
+        elif (p, "acceptable") in LIMITS:
             score = score_acceptable(str(raw_sample) if raw_sample is not None else "")
 
-        out_scores[param] = score
+        out_scores[p] = score
 
+    # Ağırlıklı ortalama ile HF
     num, den = 0.0, 0.0
     for p, w in WEIGHTS.items():
         s = out_scores.get(p, np.nan)
@@ -243,9 +249,12 @@ def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
     return {"scores": out_scores, "fail_fast": ff, "hf": hf}
 
 
+# -------------------------------
+# main
+# -------------------------------
 def main():
     script_path = Path(__file__).resolve()
-    data_dir, in_path = find_clean_csv(script_path)
+    data_dir, in_path = find_clean_yeni_csv(script_path)
 
     if not in_path.exists():
         print(f"[!] Girdi yok: {in_path}")
@@ -255,6 +264,7 @@ def main():
     feat_out_path = data_dir / "izsu_features.csv"
     state = data_dir / STATE_NAME
 
+    # İncremental için son tarih
     last_date = read_state_date(state)
     if hf_out_path.exists():
         try:
@@ -275,40 +285,67 @@ def main():
 
     print(f"[i] Girdi: {in_path}")
     if last_date:
-        print(f"[i] Son HF tarihi: {last_date}")
+        print(f"[i] Son HF tarihi (state): {last_date}")
 
-    df = pd.read_csv(in_path, encoding="utf-8-sig")
+    # Yeni cleaned dosyayı oku
+    raw = pd.read_csv(in_path, encoding="utf-8-sig")
 
-    if "ParametreAdi" in df.columns:
-        df["ParametreAdi"] = df["ParametreAdi"].apply(canon_param)
-    if "Birim" in df.columns:
-        df["Birim"] = df["Birim"].apply(canon_unit)
+    # Çalışma dataframe'i: eski pipe'a benzer kolon isimleri
+    work = pd.DataFrame()
+    work["Tarih"] = pd.to_datetime(raw["Tarih_Clean"], errors="coerce").dt.date
+    work["NoktaAdi"] = raw["NoktaAdi_Clean"]
+    work["ParametreAdi"] = raw["ParametreAdi_Clean"]
+    work["Birim"] = raw["Birim_Clean"]
+    work["Deger"] = raw["Deger_Num"]
+    work["DegerRaw"] = raw["DegerRaw"]
 
-    df["__Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce").dt.date
+    work = work.dropna(subset=["Tarih", "NoktaAdi", "ParametreAdi"])
+
+    # İncremental filtre
     if last_date:
-        df = df[df["__Tarih"] > last_date]
-    if df.empty:
+        work = work[work["Tarih"] > last_date]
+
+    if work.empty:
         print("[i] Hesaplanacak yeni kayıt yok. Çıkılıyor.")
         return
 
-    groups = df.groupby(["Tarih", "NoktaAdi"], dropna=False)
+    # HF hesapla
+    groups = work.groupby(["Tarih", "NoktaAdi"], dropna=False)
     rows = []
     for (dt, pt), g in groups:
         res = compute_scores_for_row(g)
-        row = {"Tarih": dt, "NoktaAdi": pt, "HealthFactor": res["hf"], "FailFast": res["fail_fast"]}
+        row = {
+            "Tarih": dt,
+            "NoktaAdi": pt,
+            "HealthFactor": res["hf"],
+            "FailFast": res["fail_fast"],
+        }
         for p in WEIGHTS.keys():
             row[f"{p}_score"] = res["scores"].get(p, np.nan)
         row["RiskClass"] = classify_hf(row["HealthFactor"], row["FailFast"])
         rows.append(row)
-    hf_new = pd.DataFrame(rows).sort_values(["Tarih", "NoktaAdi"]).reset_index(drop=True)
 
-    wide_vals = (
-        df.drop(columns=["__Tarih"])
-          .pivot_table(index=["Tarih", "NoktaAdi"], columns="ParametreAdi", values="Deger", aggfunc="mean")
-          .reset_index()
+    hf_new = (
+        pd.DataFrame(rows)
+        .sort_values(["Tarih", "NoktaAdi"])
+        .reset_index(drop=True)
     )
+
+    # Geniş (feature) tablo
+    wide_vals = (
+        work
+        .pivot_table(
+            index=["Tarih", "NoktaAdi"],
+            columns="ParametreAdi",
+            values="Deger",
+            aggfunc="mean",
+        )
+        .reset_index()
+    )
+
     features_new = pd.merge(wide_vals, hf_new, on=["Tarih", "NoktaAdi"], how="left")
 
+    # Eski dosyalarla birleştir (incremental)
     if hf_out_path.exists():
         base = pd.read_csv(hf_out_path, encoding="utf-8-sig")
         hf_all = pd.concat([base, hf_new], ignore_index=True)
@@ -325,6 +362,7 @@ def main():
 
     hf_all = hf_all.sort_values(["Tarih", "NoktaAdi"]).reset_index(drop=True)
     features_all = features_all.sort_values(["Tarih", "NoktaAdi"]).reset_index(drop=True)
+
     hf_all.to_csv(hf_out_path, index=False, encoding="utf-8-sig")
     features_all.to_csv(feat_out_path, index=False, encoding="utf-8-sig")
 
@@ -333,13 +371,14 @@ def main():
         state.write_text(max_date.strftime("%Y-%m-%d"), encoding="utf-8")
 
     print("--------------------------------------------------")
-    print("HF & Features (incremental) tamamlandı")
-    print(f"Yeni HF satırı: {len(hf_new)} | Toplam: {len(hf_all)}")
-    print(f"Yeni features: {len(features_new)} | Toplam: {len(features_all)}")
+    print("HF & Features (incremental) tamamlandı ✅")
+    print(f"Yeni HF satırı: {len(hf_new)} | Toplam HF: {len(hf_all)}")
+    print(f"Yeni features: {len(features_new)} | Toplam features: {len(features_all)}")
     print(f"Son tarih: {max_date}")
     print(f"HF CSV   : {hf_out_path}")
     print(f"Feat CSV : {feat_out_path}")
     print("--------------------------------------------------")
+
 
 if __name__ == "__main__":
     main()
