@@ -121,6 +121,29 @@ def clean_dataframe_lossless(df: pd.DataFrame) -> pd.DataFrame:
         out["DegerRaw"] = out["Deger"].astype(str).map(normalize_whitespace)
         parsed = out["DegerRaw"].apply(parse_value)
         out["Deger_Num"], out["Deger_Censor"], out["Deger_Limit"] = zip(*parsed)
+        if "ParametreAdi_Clean" in out.columns and "DegerRaw" in out.columns:
+            raw = out["DegerRaw"].str.strip().str.upper()
+
+            # --- TAT ---
+            mask_tat = out["ParametreAdi_Clean"] == "Tat"
+            out.loc[mask_tat & raw.isin(["0", "UYGUN"]), "Deger_Num"] = 1.0
+            out.loc[mask_tat & (~raw.isin(["0", "UYGUN"])), "Deger_Num"] = 0.0
+
+            # --- BULANIKLIK ---
+            mask_bulan = out["ParametreAdi_Clean"] == "Bulanıklık"
+            # UYGUN → 1.0
+            out.loc[mask_bulan & raw.eq("UYGUN"), "Deger_Num"] = 1.0
+            # Sayısalsa elleme; parse_value zaten doğru değeri koydu
+
+            # --- KOKU ---
+            mask_koku = out["ParametreAdi_Clean"] == "Koku"
+            out.loc[mask_koku & raw.isin(["0", "UYGUN"]), "Deger_Num"] = 1.0
+            out.loc[mask_koku & (~raw.isin(["0", "UYGUN"])), "Deger_Num"] = 0.0
+
+            # --- RENK ---
+            mask_renk = out["ParametreAdi_Clean"] == "Renk"
+            out.loc[mask_renk & raw.isin(["0", "UYGUN"]), "Deger_Num"] = 1.0
+            out.loc[mask_renk & (~raw.isin(["0", "UYGUN"])), "Deger_Num"] = 0.0
 
     # Sıralama sadece görüntü için; satır sayısını etkilemez
     sort_keys = [k for k in ["Tarih_Clean","NoktaId","ParametreAdi_Clean","Birim_Clean"] if k in out.columns]
