@@ -4,26 +4,9 @@ import numpy as np
 from datetime import datetime
 import re
 
-WEIGHTS = {
-    "E.coli": 0.133,
-    "Koliform Bakteri": 0.133,
-    "C.Perfringens": 0.133,
-    "Arsenik": 0.088,
-    "Nitrit": 0.088,
-    "Alüminyum": 0.055,
-    "Demir": 0.055,
-    "Amonyum": 0.055,
-    "pH": 0.040,
-    "Klorür": 0.020,
-    "İletkenlik": 0.020,
-    "Oksitlenebilirlik": 0.020,
-    "Bulanıklık": 0.010,
-    "Tat": 0.010,
-    "Koku": 0.010,
-    "Renk": 0.010,
-    "Toplam Sertlik": 0.010,
-    "Tuzluluk": 0.010,
-}
+
+STATE_NAME = "last_hf_success_date.txt"
+
 
 LIMITS = {
     ("Arsenik", "μg/L"): 10.0,
@@ -38,6 +21,7 @@ LIMITS = {
     ("E.coli", "Sayı/100 ml"): 0.0,
     ("Koliform Bakteri", "Sayı/100 ml"): 0.0,
     ("C.Perfringens", "Sayı/100 ml"): 0.0,
+
     ("Bulanıklık", "acceptable"): None,
     ("Tat", "acceptable"): None,
     ("Koku", "acceptable"): None,
@@ -46,7 +30,32 @@ LIMITS = {
     ("Tuzluluk", "ppt"): None,
 }
 
-STATE_NAME = "last_hf_success_date.txt"
+
+def find_clean_csv(script_path: Path) -> tuple[Path, Path]:
+    script_dir = script_path.parent
+    candidates = [
+        script_dir / "izsu_data_cleaned.csv",
+        script_dir / "data" / "izsu_data_cleaned.csv",
+        script_dir.parent / "data" / "izsu_data_cleaned.csv",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p.parent, p
+
+    return script_dir, script_dir / "izsu_data_cleaned.csv"
+
+
+def read_state_date(path: Path):
+    if not path.exists():
+        return None
+    txt = path.read_text(encoding="utf-8").strip()
+    for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(txt, fmt).date()
+        except ValueError:
+            continue
+    return None
+
 
 
 def scoring_param_name(p: str) -> str:
@@ -54,15 +63,12 @@ def scoring_param_name(p: str) -> str:
         return ""
     s = p.strip()
     low = s.lower()
-
     if low.replace(" ", "") in {"e.coli", "ecoli", "e-coli"}:
         return "E.coli"
-
     if low == "koliform bakteri":
         return "Koliform Bakteri"
     if low == "c.perfringens":
         return "C.Perfringens"
-
     return s
 
 
@@ -80,16 +86,16 @@ def standardize_to(value: float, unit: str, target: str):
     return np.nan
 
 
-def score_acceptable(raw_value: str) -> float:
-    if not isinstance(raw_value, str):
+def score_acceptable(raw: str):
+    if not isinstance(raw, str):
         return np.nan
-    s = raw_value.strip().lower()
+    s = raw.strip().lower()
     if re.fullmatch(r"(uygun|geçerli|gecerli|0|yok|nd|-|—)", s):
         return 1.0
     return np.nan
 
 
-def fail_fast_trigger(param: str, value: float, unit: str) -> bool:
+def fail_fast_trigger(param, value, unit):
     p = scoring_param_name(param)
     if p == "E.coli":
         return (not pd.isna(value)) and value > 0
@@ -102,13 +108,14 @@ def fail_fast_trigger(param: str, value: float, unit: str) -> bool:
     return False
 
 
-def compute_qn_linear(value: float, limit: float, ideal: float = 0.0) -> float:
-    if pd.isna(value) or pd.isna(limit) or limit <= ideal:
+def compute_qn_linear(v, S, ideal=0.0):
+    if pd.isna(v) or pd.isna(S) or S <= ideal:
         return np.nan
-    return float(abs(value - ideal) / (limit - ideal) * 100.0)
+    return abs(v - ideal) / (S - ideal) * 100.0
 
 
-def compute_qn_ph(ph: float, lo: float, hi: float, ideal: float = 7.0) -> float:
+
+def compute_qn_ph(ph, lo, hi, ideal=7.0):
     if pd.isna(ph):
         return np.nan
     if ph >= ideal:
@@ -117,7 +124,7 @@ def compute_qn_ph(ph: float, lo: float, hi: float, ideal: float = 7.0) -> float:
         denom = ideal - lo
     if denom <= 0:
         return np.nan
-    return float(abs(ph - ideal) / denom * 100.0)
+    return abs(ph - ideal) / denom * 100.0
 
 
 def get_numeric_limit(param: str):
@@ -131,8 +138,8 @@ def get_numeric_limit(param: str):
         return float(val), u
     return None, None
 
-S_NUMERIC = {}
 
+S_NUMERIC = {}
 for (p, u), val in LIMITS.items():
     if val is None:
         continue
@@ -143,8 +150,7 @@ for (p, u), val in LIMITS.items():
         continue
     if u in ("acceptable", "Sayı/100 ml"):
         continue
-    if p not in S_NUMERIC:
-        S_NUMERIC[p] = float(val)
+    S_NUMERIC[p] = float(val)
 
 if S_NUMERIC:
     K = 1.0 / sum(1.0 / v for v in S_NUMERIC.values())
@@ -153,7 +159,8 @@ else:
     K = 0.0
     W_UNIT = {}
 
-def classify_hf(hf: float, fail_fast: bool) -> str:
+
+def classify_hf(hf, fail_fast):
     if fail_fast:
         return "Risk"
     if pd.isna(hf):
@@ -165,54 +172,24 @@ def classify_hf(hf: float, fail_fast: bool) -> str:
     return "Risk"
 
 
-def find_clean_yeni_csv(script_path: Path) -> tuple[Path, Path]:
-    script_dir = script_path.parent
-    candidates = [
-        script_dir / "izsu_data_cleaned.csv",
-        script_dir / "data" / "izsu_data_cleaned.csv",
-        script_dir.parent / "data" / "izsu_data_cleaned.csv",
-    ]
-    for p in candidates:
-        if p.exists():
-            return p.parent, p
-    return script_dir, script_dir / "izsu_data_cleaned.csv"
-
-
-def read_state_date(path: Path):
-    if not path.exists():
-        return None
-    txt = path.read_text(encoding="utf-8").strip()
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
-        try:
-            return datetime.strptime(txt, fmt).date()
-        except ValueError:
-            continue
-    return None
-
-
 def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
-    out_scores: dict[str, float] = {}
     q_values: dict[str, float] = {}
+    scores: dict[str, float] = {}
     ff = False
 
-    by_param = group_df.groupby("ParametreAdi", dropna=False)
-
-    for param_raw, sub in by_param:
+    for param_raw, sub in group_df.groupby("ParametreAdi", dropna=False):
         p = scoring_param_name(param_raw)
 
         v = pd.to_numeric(sub["Deger"], errors="coerce").astype(float).mean(skipna=True)
-
-        unit_series = sub["Birim"].dropna().astype(str)
-        unit = None if unit_series.empty else unit_series.iloc[0].replace("µ", "μ")
-
+        unit_series = sub["Birim"].dropna().astype(str).replace("µ", "μ")
+        unit = unit_series.iloc[0] if not unit_series.empty else None
         raw_series = sub["DegerRaw"].dropna().astype(str)
-        raw_sample = None if raw_series.empty else raw_series.iloc[0]
+        raw_sample = raw_series.iloc[0] if not raw_series.empty else None
 
         if fail_fast_trigger(p, v, unit or ""):
             ff = True
 
         qn = np.nan
-
         if (p, "Sayı/100 ml") in LIMITS:
             if pd.isna(v):
                 qn = np.nan
@@ -230,7 +207,7 @@ def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
                 qn = compute_qn_linear(vv, limit_val, ideal=0.0)
 
             elif (p, "acceptable") in LIMITS:
-                ok = score_acceptable(str(raw_sample) if raw_sample is not None else "")
+                ok = score_acceptable(raw_sample or "")
                 if not pd.isna(ok):
                     qn = 0.0 if ok == 1.0 else 100.0
                 else:
@@ -239,42 +216,37 @@ def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
                 qn = np.nan
 
         q_values[p] = qn
-
         if not pd.isna(qn):
-            score = max(0.0, 1.0 - max(qn, 0.0) / 100.0)
+            scores[p] = max(0.0, 1.0 - max(qn, 0.0) / 100.0)
         else:
-            score = np.nan
-        out_scores[p] = score
+            scores[p] = np.nan
 
     num, den = 0.0, 0.0
     for p, qn in q_values.items():
-        if p not in W_UNIT:
-            continue
-        if pd.isna(qn):
+        if p not in W_UNIT or pd.isna(qn):
             continue
         w = W_UNIT[p]
         num += w * qn
         den += w
 
-    if den == 0.0:
-        wqi = np.nan
-    else:
-        wqi = num / den
-
+    wqi = num / den if den > 0 else np.nan
     if pd.isna(wqi):
         hf = np.nan
     else:
         hf = max(0.0, 100.0 - wqi)
 
-    return {"scores": out_scores, "fail_fast": ff, "hf": hf}
-
+    return {"scores": scores, "fail_fast": ff, "hf": hf}
 
 def main():
     script_path = Path(__file__).resolve()
-    data_dir, in_path = find_clean_yeni_csv(script_path)
+    data_dir, in_path = find_clean_csv(script_path)
+
+    print("[i] Script klasörü :", script_path.parent)
+    print("[i] Data klasörü   :", data_dir)
+    print("[i] Girdi dosyası  :", in_path)
 
     if not in_path.exists():
-        print(f"[!] Girdi yok: {in_path}")
+        print("[!] Girdi yok:", in_path)
         return
 
     hf_out_path = data_dir / "izsu_health_factor.csv"
@@ -282,6 +254,7 @@ def main():
     state = data_dir / STATE_NAME
 
     last_date = read_state_date(state)
+
     if hf_out_path.exists():
         try:
             tmp = pd.read_csv(hf_out_path, encoding="utf-8-sig")
@@ -290,6 +263,7 @@ def main():
                 last_date = max(last_date or dmax, dmax)
         except Exception:
             pass
+
     if feat_out_path.exists():
         try:
             tmp = pd.read_csv(feat_out_path, encoding="utf-8-sig")
@@ -299,9 +273,8 @@ def main():
         except Exception:
             pass
 
-    print(f"[i] Girdi: {in_path}")
     if last_date:
-        print(f"[i] Son HF tarihi (state): {last_date}")
+        print(f"[i] Son HF tarihi (state/hf/features): {last_date}")
 
     raw = pd.read_csv(in_path, encoding="utf-8-sig")
 
@@ -331,10 +304,10 @@ def main():
             "NoktaAdi": pt,
             "HealthFactor": res["hf"],
             "FailFast": res["fail_fast"],
+            "RiskClass": classify_hf(res["hf"], res["fail_fast"]),
         }
-        for p in WEIGHTS.keys():
-            row[f"{p}_score"] = res["scores"].get(p, np.nan)
-        row["RiskClass"] = classify_hf(row["HealthFactor"], row["FailFast"])
+        for p, s in res["scores"].items():
+            row[f"{p}_score"] = s
         rows.append(row)
 
     hf_new = (
@@ -380,15 +353,12 @@ def main():
     if pd.notna(max_date):
         state.write_text(max_date.strftime("%Y-%m-%d"), encoding="utf-8")
 
-    print("--------------------------------------------------")
-    print("HF & Features (incremental, WAWQI) tamamlandı")
-    print(f"Yeni HF satırı: {len(hf_new)} | Toplam HF: {len(hf_all)}")
-    print(f"Yeni features: {len(features_new)} | Toplam features: {len(features_all)}")
-    print(f"Son tarih: {max_date}")
-    print(f"HF CSV   : {hf_out_path}")
-    print(f"Feat CSV : {feat_out_path}")
-    print("--------------------------------------------------")
-
+    print(f"Yeni HF satırı   : {len(hf_new)} | Toplam HF: {len(hf_all)}")
+    print(f"Yeni features satı: {len(features_new)} | Toplam features: {len(features_all)}")
+    print(f"Son tarih (state): {max_date}")
+    print(f"HF CSV           : {hf_out_path}")
+    print(f"Features CSV     : {feat_out_path}")
+    print(f"State file       : {state}")
 
 if __name__ == "__main__":
     main()
