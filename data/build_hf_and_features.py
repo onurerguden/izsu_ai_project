@@ -4,28 +4,29 @@ import numpy as np
 from datetime import datetime
 import re
 
-WEIGHTS = {
-    "E.coli": 0.133,
-    "Koliform Bakteri": 0.133,
-    "C.Perfringens": 0.133,
-    "Arsenik": 0.088,
-    "Nitrit": 0.088,
-    "Alüminyum": 0.055,
-    "Demir": 0.055,
-    "Amonyum": 0.055,
-    "pH": 0.040,
-    "Klorür": 0.020,
-    "İletkenlik": 0.020,
-    "Oksitlenebilirlik": 0.020,
-    "Bulanıklık": 0.010,
-    "Tat": 0.010,
-    "Koku": 0.010,
-    "Renk": 0.010,
-    "Toplam Sertlik": 0.010,
-    "Tuzluluk": 0.010,
-}
+PARAM_NAMES = [
+    "E.coli",
+    "Koliform Bakteri",
+    "C.Perfringens",
+    "Arsenik",
+    "Nitrit",
+    "Alüminyum",
+    "Demir",
+    "Amonyum",
+    "pH",
+    "Klorür",
+    "İletkenlik",
+    "Oksitlenebilirlik",
+    "Bulanıklık",
+    "Tat",
+    "Koku",
+    "Renk",
+    "Toplam Sertlik",
+    "Tuzluluk",
+]
 
-LIMITS = {
+
+LIMITS = {                             #Sn
     ("Arsenik", "μg/L"): 10.0,
     ("Alüminyum", "μg/L"): 200.0,
     ("Demir", "μg/L"): 200.0,
@@ -332,7 +333,7 @@ def main():
             "HealthFactor": res["hf"],
             "FailFast": res["fail_fast"],
         }
-        for p in WEIGHTS.keys():
+        for p in PARAM_NAMES:
             row[f"{p}_score"] = res["scores"].get(p, np.nan)
         row["RiskClass"] = classify_hf(row["HealthFactor"], row["FailFast"])
         rows.append(row)
