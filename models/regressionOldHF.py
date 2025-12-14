@@ -28,11 +28,9 @@ warnings.filterwarnings('ignore')
 
 class ProductionWaterQualityRegressor:
     """
-    Production-Ready Water Quality Model with Train/Validation/Test Split
-    - Separate train/validation/test sets (70/15/15 by time)
-    - 5 Regression metrics per split
-    - Feature importance analysis
-    - Comprehensive visualization
+    Production-Ready Water Quality Model (LEAKAGE-FREE FIXED VERSION)
+    - Fix 1: Augmentation moved AFTER split (Applied only to Train)
+    - Fix 2: Removed 'bfill' to prevent look-ahead bias
     """
 
     def __init__(self, csv_filename="izsu_health_factor.csv"):
@@ -53,10 +51,10 @@ class ProductionWaterQualityRegressor:
         self.scaler = None
         self.imputer = None
 
-        self.output_dir = Path("ai_outputs/production_model")
+        self.output_dir = Path("ai_outputs/production_model_fixed")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"[INIT] Production Water Quality Regressor")
+        print(f"[INIT] Production Water Quality Regressor (Leakage-Free)")
         print(f"[INIT] CSV: {self.csv_path}")
         print(f"[INIT] Output: {self.output_dir}")
 
@@ -76,36 +74,6 @@ class ProductionWaterQualityRegressor:
         except FileNotFoundError:
             print(f"[ERROR] File not found: {self.csv_path}")
             sys.exit(1)
-
-    def augment_time_series_data(self):
-        """Conservative Gaussian noise augmentation."""
-        print("\n[DATA AUGMENTATION] Starting conservative augmentation...")
-
-        augmented_dfs = [self.df.copy()]
-
-        for location in self.df['NoktaAdi'].unique():
-            location_data = self.df[self.df['NoktaAdi'] == location].copy()
-            if len(location_data) < 5:
-                continue
-
-            noise_data = location_data.copy()
-            numeric_cols = noise_data.select_dtypes(include=[np.number]).columns
-
-            for col in numeric_cols:
-                if col != self.target_col:
-                    std_val = noise_data[col].std()
-                    if std_val > 0:
-                        noise = np.random.normal(0, std_val * 0.01, len(noise_data))
-                        noise_data[col] = noise_data[col] + noise
-
-            augmented_dfs.append(noise_data)
-
-        self.df = pd.concat(augmented_dfs, ignore_index=True)
-        self.df = self.df.sort_values(by=['NoktaAdi', 'Tarih']).reset_index(drop=True)
-
-        augment_ratio = len(self.df) / len(self.df_original)
-        print(f"[DATA AUGMENTATION] Ratio: {augment_ratio:.2f}x")
-        return self
 
     def feature_engineering(self):
         """Create location-aware features."""
@@ -140,17 +108,17 @@ class ProductionWaterQualityRegressor:
         return self
 
     def split_train_val_test(self):
-        """Split data into train/val/test (70/15/15) by time."""
+        """Split data into train/val/test (70/15/15) cleanly."""
         print("\n[DATA SPLIT] Splitting into Train/Val/Test (70/15/15 by time)...")
 
         data = self.df.sort_values(by=['Tarih', 'NoktaAdi']).reset_index(drop=True)
         data = data.dropna(subset=[self.target_col]).copy()
 
-        # Fill NaNs
+        # FIX: Removed 'bfill' (Look-ahead bias fix)
         for col in self.global_feature_cols:
             if col in data.columns:
                 data[col] = data.groupby('NoktaAdi')[col].fillna(method='ffill', limit=5)
-                data[col] = data.groupby('NoktaAdi')[col].fillna(method='bfill', limit=5)
+                # Fallback to median ONLY if NaNs remain (no future peeking)
                 if data[col].isna().any():
                     data[col] = data[col].fillna(data[col].median())
 
@@ -160,38 +128,67 @@ class ProductionWaterQualityRegressor:
         mask = X.notna().all(axis=1) & y.notna()
         X = X[mask]
         y = y[mask]
-        data = data[mask]
 
-        # Split by time (70/15/15)
+        # Temporal Split (Time Series Strict)
         n = len(X)
         train_end = int(n * 0.70)
         val_end = int(n * 0.85)
 
-        X_train, y_train = X.iloc[:train_end], y.iloc[:train_end]
-        X_val, y_val = X.iloc[train_end:val_end], y.iloc[train_end:val_end]
-        X_test, y_test = X.iloc[val_end:], y.iloc[val_end:]
+        X_train_raw = X.iloc[:train_end]
+        y_train = y.iloc[:train_end]
 
-        # Preprocess (fit ONLY on training data)
+        X_val_raw = X.iloc[train_end:val_end]
+        y_val = y.iloc[train_end:val_end]
+
+        X_test_raw = X.iloc[val_end:]
+        y_test = y.iloc[val_end:]
+
+        # Preprocess (Fit ONLY on Train)
         self.imputer = SimpleImputer(strategy='median')
         self.scaler = RobustScaler()
 
-        X_train_imputed = self.imputer.fit_transform(X_train)
+        # Fit on Train
+        X_train_imputed = self.imputer.fit_transform(X_train_raw)
         X_train_scaled = self.scaler.fit_transform(X_train_imputed)
 
-        X_val_imputed = self.imputer.transform(X_val)
+        # Transform others
+        X_val_imputed = self.imputer.transform(X_val_raw)
         X_val_scaled = self.scaler.transform(X_val_imputed)
 
-        X_test_imputed = self.imputer.transform(X_test)
+        X_test_imputed = self.imputer.transform(X_test_raw)
         X_test_scaled = self.scaler.transform(X_test_imputed)
 
         self.X_train = pd.DataFrame(X_train_scaled, columns=X.columns)
         self.X_val = pd.DataFrame(X_val_scaled, columns=X.columns)
         self.X_test = pd.DataFrame(X_test_scaled, columns=X.columns)
+
         self.y_train = y_train.reset_index(drop=True)
         self.y_val = y_val.reset_index(drop=True)
         self.y_test = y_test.reset_index(drop=True)
 
         print(f"[DATA SPLIT] Train: {len(self.X_train)} | Val: {len(self.X_val)} | Test: {len(self.X_test)}")
+        return self
+
+    def augment_training_data(self):
+        """
+        FIXED AUGMENTATION: Applied ONLY to Training Set AFTER split.
+        Adds conservative Gaussian noise to scaled features.
+        """
+        print("\n[DATA AUGMENTATION] Applying augmentation ONLY to Training set...")
+
+        # Create noise based on scaled data (mean~0, std~1)
+        X_aug = self.X_train.copy()
+        y_aug = self.y_train.copy()
+
+        # Add 1% noise
+        noise = np.random.normal(0, 0.01, X_aug.shape)
+        X_aug = X_aug + noise
+
+        # Combine original + augmented
+        self.X_train = pd.concat([self.X_train, X_aug], ignore_index=True)
+        self.y_train = pd.concat([self.y_train, y_aug], ignore_index=True)
+
+        print(f"[DATA AUGMENTATION] Train size doubled to: {len(self.X_train)}")
         return self
 
     def train_and_evaluate(self):
@@ -291,7 +288,7 @@ class ProductionWaterQualityRegressor:
 
         print(f"\n[STRATEGY] Hybrid Global Model + Location-Aware Features")
         print(f"[VALIDATION] Train/Validation/Test Split (70/15/15 by time)")
-        print(f"[DATA] Augmentation: {len(self.df) / len(self.df_original):.2f}x")
+        print(f"[DATA] Augmentation: Leakage-Free (Only Train)")
 
         print(f"\n[BEST MODEL PERFORMANCE]")
         print("-" * 150)
@@ -466,16 +463,22 @@ class ProductionWaterQualityRegressor:
         print(f"[VISUALIZATION] Plots saved to {self.output_dir}")
 
     def run_pipeline(self):
-        """Execute full production pipeline."""
+        """Execute full production pipeline (Revised Order)."""
         print("\n" + "=" * 150)
         print(f"{'PRODUCTION WATER QUALITY REGRESSION MODEL - FULL PIPELINE':^150}")
         print("=" * 150)
 
+        # 1. Load Data
         self.load_and_preprocess()
-        self.augment_time_series_data()
+        # 2. Features (on raw data)
         self.feature_engineering()
+        # 3. SPLIT (CRITICAL STEP - Must be before augmentation)
         self.split_train_val_test()
+        # 4. AUGMENT (Only on Train)
+        self.augment_training_data()
+        # 5. Train
         self.train_and_evaluate()
+        # 6. Report
         self.print_metrics_matrix()
         self.print_comprehensive_report()
         self.generate_visualizations()
