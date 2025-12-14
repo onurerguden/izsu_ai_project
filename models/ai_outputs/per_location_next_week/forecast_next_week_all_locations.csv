@@ -1,0 +1,75 @@
+Location,LastDate,PredictedNextWeekHF,BestModel,ModelFile
+Eski Izmir Cad. 3959 Kvs Uzundere,2025-11-12,91.09927726746835,Ridge,ai_outputs\per_location_next_week\models\Eski_Izmir_Cad._3959_Kvs_Uzundere_best_Ridge.pkl
+4969 Sok. No:2/a Çamlık,2025-11-12,90.45178668929425,Ridge,ai_outputs\per_location_next_week\models\4969_Sok._No_2_a_Çamlık_best_Ridge.pkl
+Kahramanlar Cd. No:2 H. Bayram Camii,2025-11-12,90.40368352440356,Ridge,ai_outputs\per_location_next_week\models\Kahramanlar_Cd._No_2_H._Bayram_Camii_best_Ridge.pkl
+682/4 Sok. No:2 Gediz,2025-11-19,90.25381263758099,GradientBoosting,ai_outputs\per_location_next_week\models\682_4_Sok._No_2_Gediz_best_GradientBoosting.pkl
+Koşuyolu Cad. Efeler Mah. No:41 Avni Naili Limboz Camii,2025-11-19,90.24745178222656,XGBoost,ai_outputs\per_location_next_week\models\Koşuyolu_Cad._Efeler_Mah._No_41_Avni_Naili_Limboz_Camii_best_XGBoost.pkl
+3586 Sok. No:1 Gürçeşme,2025-11-19,90.24690675831414,RandomForest,ai_outputs\per_location_next_week\models\3586_Sok._No_1_Gürçeşme_best_RandomForest.pkl
+Başarı Cad.i̇le 170. Sok.kavşağı,2025-11-19,90.23694531524772,RandomForest,ai_outputs\per_location_next_week\models\Başarı_Cad.i̇le_170._Sok.kavşağı_best_RandomForest.pkl
+R.erkutlu Şehitlik Önü No:290/a Kadifekale,2025-11-12,90.20347605342192,RandomForest,ai_outputs\per_location_next_week\models\R.erkutlu_Şehitlik_Önü_No_290_a_Kadifekale_best_RandomForest.pkl
+A.hatboyu Cd. İle 545 Sok.. Kvs. Akıncılar,2025-11-12,90.17855778738549,RandomForest,ai_outputs\per_location_next_week\models\A.hatboyu_Cd._İle_545_Sok.._Kvs._Akıncılar_best_RandomForest.pkl
+3 İle 3/8 Sok. Kvs. Adatepe,2025-11-12,90.17379329004865,GradientBoosting,ai_outputs\per_location_next_week\models\3_İle_3_8_Sok._Kvs._Adatepe_best_GradientBoosting.pkl
+I.sivri Cd. İle 254 Sok.. Kvs. Kozağaç,2025-11-12,90.15930682670309,GradientBoosting,ai_outputs\per_location_next_week\models\I.sivri_Cd._İle_254_Sok.._Kvs._Kozağaç_best_GradientBoosting.pkl
+220 Sok. No:163/b Çamlıkule,2025-11-12,90.15705635723657,GradientBoosting,ai_outputs\per_location_next_week\models\220_Sok._No_163_b_Çamlıkule_best_GradientBoosting.pkl
+Türkmenistan Cad. İle 1206 Sok.. Kvs. Evka-1,2025-11-12,90.13482666015625,XGBoost,ai_outputs\per_location_next_week\models\Türkmenistan_Cad._İle_1206_Sok.._Kvs._Evka-1_best_XGBoost.pkl
+4058 Sok. İle 4056 Sok. Kavşağı,2025-11-19,90.12801361083984,XGBoost,ai_outputs\per_location_next_week\models\4058_Sok._İle_4056_Sok._Kavşağı_best_XGBoost.pkl
+Ulu Önder Cad. İle Gökdere Cad.kavşağı,2025-11-19,90.12767831520198,RandomForest,ai_outputs\per_location_next_week\models\Ulu_Önder_Cad._İle_Gökdere_Cad.kavşağı_best_RandomForest.pkl
+Eski Izmir Cad. No:562/a Kahve,2025-11-19,90.12635803222656,XGBoost,ai_outputs\per_location_next_week\models\Eski_Izmir_Cad._No_562_a_Kahve_best_XGBoost.pkl
+İnönü Cad. İle 100 Sok. Kavşağı,2025-11-19,90.12627532006314,RandomForest,ai_outputs\per_location_next_week\models\İnönü_Cad._İle_100_Sok._Kavşağı_best_RandomForest.pkl
+Altan Aydin İle 4165 Sok.. Kvs Aktepe,2025-11-12,90.12540062964757,RandomForest,ai_outputs\per_location_next_week\models\Altan_Aydin_İle_4165_Sok.._Kvs_Aktepe_best_RandomForest.pkl
+5777 İle 5780 Sok. Kvs. U. Mumcu,2025-11-12,90.12420818891955,GradientBoosting,ai_outputs\per_location_next_week\models\5777_İle_5780_Sok._Kvs._U._Mumcu_best_GradientBoosting.pkl
+Dogus Cad. İle A.yesevi Cd. Kvs. Kuruçeşme,2025-11-12,90.11157622921121,RandomForest,ai_outputs\per_location_next_week\models\Dogus_Cad._İle_A.yesevi_Cd._Kvs._Kuruçeşme_best_RandomForest.pkl
+514 Sok.. No:3/a Beyazevler,2025-11-12,90.09077857218203,GradientBoosting,ai_outputs\per_location_next_week\models\514_Sok.._No_3_a_Beyazevler_best_GradientBoosting.pkl
+3948/6 Sok. No:2 C.çeşme,2025-11-12,90.0231106171726,GradientBoosting,ai_outputs\per_location_next_week\models\3948_6_Sok._No_2_C.çeşme_best_GradientBoosting.pkl
+Abdullah Arda Meydanı No:29 Arkadaşlar Kahvesi,2025-11-19,89.99859636880551,GradientBoosting,ai_outputs\per_location_next_week\models\Abdullah_Arda_Meydanı_No_29_Arkadaşlar_Kahvesi_best_GradientBoosting.pkl
+113/19 Sok. No:10 İzyuva,2025-11-12,89.96283045182936,RandomForest,ai_outputs\per_location_next_week\models\113_19_Sok._No_10_İzyuva_best_RandomForest.pkl
+52/74 İle 52/18 Sok. Kvs Esendere,2025-11-12,89.95497713766828,GradientBoosting,ai_outputs\per_location_next_week\models\52_74_İle_52_18_Sok._Kvs_Esendere_best_GradientBoosting.pkl
+1754 Sok. No:25 Asm Mevlana,2025-11-12,89.95211029052734,XGBoost,ai_outputs\per_location_next_week\models\1754_Sok._No_25_Asm_Mevlana_best_XGBoost.pkl
+Mrk. Bornova Jandarma Komando Ambarlar Yanı,2025-11-12,89.94114746966882,GradientBoosting,ai_outputs\per_location_next_week\models\Mrk._Bornova_Jandarma_Komando_Ambarlar_Yanı_best_GradientBoosting.pkl
+Dicle Cad. No:88 Aile Sağlığı Merkezi,2025-11-12,89.88336181640625,XGBoost,ai_outputs\per_location_next_week\models\Dicle_Cad._No_88_Aile_Sağlığı_Merkezi_best_XGBoost.pkl
+Ankara Cad. İle Atatürk Cad. Kav,2025-11-12,89.8718032836914,XGBoost,ai_outputs\per_location_next_week\models\Ankara_Cad._İle_Atatürk_Cad._Kav_best_XGBoost.pkl
+Fatih Cd. İle Beyazıt Cd. Tuğlacı Önü Mersinli,2025-11-12,89.84901428222656,XGBoost,ai_outputs\per_location_next_week\models\Fatih_Cd._İle_Beyazıt_Cd._Tuğlacı_Önü_Mersinli_best_XGBoost.pkl
+34.sok. No:5 Tsm Güzelyalı,2025-11-19,89.81613317161018,GradientBoosting,ai_outputs\per_location_next_week\models\34.sok._No_5_Tsm_Güzelyalı_best_GradientBoosting.pkl
+Cumhuriyet Meydanı No:16 Işıkkent,2025-11-19,89.81568908691406,XGBoost,ai_outputs\per_location_next_week\models\Cumhuriyet_Meydanı_No_16_Işıkkent_best_XGBoost.pkl
+A.i̇pekçi Cd. İle 4040 Sok. Kvs. Yesilova,2025-11-12,89.8075043515807,RandomForest,ai_outputs\per_location_next_week\models\A.i̇pekçi_Cd._İle_4040_Sok._Kvs._Yesilova_best_RandomForest.pkl
+914 Sok. No.7/a Ufuk Mah,2025-11-12,89.78727722167969,XGBoost,ai_outputs\per_location_next_week\models\914_Sok._No.7_a_Ufuk_Mah_best_XGBoost.pkl
+3513 İle 3514 Sok. Kvs Levent,2025-11-12,89.78359985351562,XGBoost,ai_outputs\per_location_next_week\models\3513_İle_3514_Sok._Kvs_Levent_best_XGBoost.pkl
+Kazım Dirik Cad. No.46,2025-11-19,89.72734378238006,RandomForest,ai_outputs\per_location_next_week\models\Kazım_Dirik_Cad._No.46_best_RandomForest.pkl
+65/17 Sok. No:45 Yumurtacı Ahmet Camii,2025-11-19,89.68856811523438,XGBoost,ai_outputs\per_location_next_week\models\65_17_Sok._No_45_Yumurtacı_Ahmet_Camii_best_XGBoost.pkl
+5227 Sok. No:35/c Çamdibi,2025-11-19,89.6590051535718,GradientBoosting,ai_outputs\per_location_next_week\models\5227_Sok._No_35_c_Çamdibi_best_GradientBoosting.pkl
+İzsu Narlıdere Teknik Amirlik,2025-11-19,89.65856226232468,RandomForest,ai_outputs\per_location_next_week\models\İzsu_Narlıdere_Teknik_Amirlik_best_RandomForest.pkl
+M.pasa Cad. İle Hüseyin Ögütcen Kavşağı,2025-11-19,89.62093654113797,RandomForest,ai_outputs\per_location_next_week\models\M.pasa_Cad._İle_Hüseyin_Ögütcen_Kavşağı_best_RandomForest.pkl
+Selimiye Cad. No:30/b Gültepe,2025-11-19,89.61912420789369,Ridge,ai_outputs\per_location_next_week\models\Selimiye_Cad._No_30_b_Gültepe_best_Ridge.pkl
+Şehitler Cad. No:22 H.mustafa Gökdemir Camii Evka-3,2025-11-19,89.60676683924736,GradientBoosting,ai_outputs\per_location_next_week\models\Şehitler_Cad._No_22_H.mustafa_Gökdemir_Camii_Evka-3_best_GradientBoosting.pkl
+Mithatpaşa Caddesi No:479,2025-11-12,89.56971854465694,GradientBoosting,ai_outputs\per_location_next_week\models\Mithatpaşa_Caddesi_No_479_best_GradientBoosting.pkl
+Ege Üni.kampüsü İtfaiye Çeşmesi/i̇zsu Teknik Amirlik,2025-11-19,89.55722962308775,GradientBoosting,ai_outputs\per_location_next_week\models\Ege_Üni.kampüsü_İtfaiye_Çeşmesi_i̇zsu_Teknik_Amirlik_best_GradientBoosting.pkl
+Kemalpaşa Cad. No: 46,2025-11-19,89.54694422275976,GradientBoosting,ai_outputs\per_location_next_week\models\Kemalpaşa_Cad._No__46_best_GradientBoosting.pkl
+Çanakkale Cad.i̇le 7057 Sok Kavsağıpınarbaşı,2025-11-19,89.53449739806489,GradientBoosting,ai_outputs\per_location_next_week\models\Çanakkale_Cad.i̇le_7057_Sok_Kavsağıpınarbaşı_best_GradientBoosting.pkl
+Sakarya Cad.no:112 Manavkuyu,2025-11-19,89.5273208618164,XGBoost,ai_outputs\per_location_next_week\models\Sakarya_Cad.no_112_Manavkuyu_best_XGBoost.pkl
+854 Sok No:51/a,2025-11-19,89.50899687763437,GradientBoosting,ai_outputs\per_location_next_week\models\854_Sok_No_51_a_best_GradientBoosting.pkl
+Hakan Uysal Cad. No:273/1 Çay Mahallesi,2025-11-12,89.48367309570312,XGBoost,ai_outputs\per_location_next_week\models\Hakan_Uysal_Cad._No_273_1_Çay_Mahallesi_best_XGBoost.pkl
+Yavuz Cad. 241/C Osmangazi,2025-11-19,89.46154989343744,GradientBoosting,ai_outputs\per_location_next_week\models\Yavuz_Cad._241_C_Osmangazi_best_GradientBoosting.pkl
+8172 Sok. No:90/1 Güzeltepe,2025-11-12,89.457275390625,XGBoost,ai_outputs\per_location_next_week\models\8172_Sok._No_90_1_Güzeltepe_best_XGBoost.pkl
+Gaziler Cad. No:185 İtfaiye Önü,2025-11-19,89.44408684943296,GradientBoosting,ai_outputs\per_location_next_week\models\Gaziler_Cad._No_185_İtfaiye_Önü_best_GradientBoosting.pkl
+273/4 No:6 Aile Sağlığı Merkezi Özkanlar,2025-11-19,89.43862331320159,RandomForest,ai_outputs\per_location_next_week\models\273_4_No_6_Aile_Sağlığı_Merkezi_Özkanlar_best_RandomForest.pkl
+Hürriyet Bulvarı No:14/e,2025-11-12,89.40561730565383,RandomForest,ai_outputs\per_location_next_week\models\Hürriyet_Bulvarı_No_14_e_best_RandomForest.pkl
+Başak Cd. No:16 Bahçe Cafe İnciralti,2025-11-12,89.39899254586906,RandomForest,ai_outputs\per_location_next_week\models\Başak_Cd._No_16_Bahçe_Cafe_İnciralti_best_RandomForest.pkl
+7348 Sok. No:2 Polis Merkezi Yamanlar,2025-11-12,89.37860107421875,XGBoost,ai_outputs\per_location_next_week\models\7348_Sok._No_2_Polis_Merkezi_Yamanlar_best_XGBoost.pkl
+1620/19 İle 1620/39 Sok. Kavsağı Cengizhan,2025-11-12,89.35130310058594,XGBoost,ai_outputs\per_location_next_week\models\1620_19_İle_1620_39_Sok._Kavsağı_Cengizhan_best_XGBoost.pkl
+1643/7 Sok. No:8 Adalet Mah,2025-11-12,89.33939372645003,GradientBoosting,ai_outputs\per_location_next_week\models\1643_7_Sok._No_8_Adalet_Mah_best_GradientBoosting.pkl
+Hürriyet Cad. Polis Mer. No:86 Atatürk,2025-11-19,89.33168029785156,XGBoost,ai_outputs\per_location_next_week\models\Hürriyet_Cad._Polis_Mer._No_86_Atatürk_best_XGBoost.pkl
+6730 Sok. No:6/a Yamaç Mah,2025-11-12,89.32415551383671,GradientBoosting,ai_outputs\per_location_next_week\models\6730_Sok._No_6_a_Yamaç_Mah_best_GradientBoosting.pkl
+7191 Sok. No:1/a Doğançay,2025-11-12,89.29606161930846,GradientBoosting,ai_outputs\per_location_next_week\models\7191_Sok._No_1_a_Doğançay_best_GradientBoosting.pkl
+Alim Dağhan Cd. İle 6716 Sok. Kvs,2025-11-12,89.29085943799328,RandomForest,ai_outputs\per_location_next_week\models\Alim_Dağhan_Cd._İle_6716_Sok._Kvs_best_RandomForest.pkl
+7659/2 Sok. No:1/b Postacılar Mah,2025-11-12,89.24846438247135,RandomForest,ai_outputs\per_location_next_week\models\7659_2_Sok._No_1_b_Postacılar_Mah_best_RandomForest.pkl
+6276 Sok.i̇le 6279 Sok Kavşağı,2025-11-19,89.23898315429688,XGBoost,ai_outputs\per_location_next_week\models\6276_Sok.i̇le_6279_Sok_Kavşağı_best_XGBoost.pkl
+7019 Sok. No:20/3 Merkez Cami Gümüşpala,2025-11-19,89.15990418171556,GradientBoosting,ai_outputs\per_location_next_week\models\7019_Sok._No_20_3_Merkez_Cami_Gümüşpala_best_GradientBoosting.pkl
+6800 Sok. No:9 Sağlık Ocağı Evka 2,2025-11-19,89.15824075530033,Ridge,ai_outputs\per_location_next_week\models\6800_Sok._No_9_Sağlık_Ocağı_Evka_2_best_Ridge.pkl
+8818 Sok. No:38 6 Nolu Sağlık Ocağı Egekent,2025-11-12,89.10510462331804,RandomForest,ai_outputs\per_location_next_week\models\8818_Sok._No_38_6_Nolu_Sağlık_Ocağı_Egekent_best_RandomForest.pkl
+Başpehlivan Kara Ali Cad. No:25/a,2025-11-19,89.07927784170045,GradientBoosting,ai_outputs\per_location_next_week\models\Başpehlivan_Kara_Ali_Cad._No_25_a_best_GradientBoosting.pkl
+8819 Sok. No:13 Egekent,2025-11-19,89.06877899169922,XGBoost,ai_outputs\per_location_next_week\models\8819_Sok._No_13_Egekent_best_XGBoost.pkl
+8022/1 Sok. No:8/1-b Ataşehir,2025-11-19,89.04189664083111,GradientBoosting,ai_outputs\per_location_next_week\models\8022_1_Sok._No_8_1-b_Ataşehir_best_GradientBoosting.pkl
+Atatürk Cad. İle Zübeyde Hanim Cad.kavşağı,2025-11-19,89.03704670238463,RandomForest,ai_outputs\per_location_next_week\models\Atatürk_Cad._İle_Zübeyde_Hanim_Cad.kavşağı_best_RandomForest.pkl
+1799 Sok No:14 Bostanlı,2025-11-19,89.02796590446047,RandomForest,ai_outputs\per_location_next_week\models\1799_Sok_No_14_Bostanlı_best_RandomForest.pkl
+8809 Sok. No:141/a Evka-5,2025-11-12,88.99322913232189,RandomForest,ai_outputs\per_location_next_week\models\8809_Sok._No_141_a_Evka-5_best_RandomForest.pkl
+8790/5 Sok. 9 Eylül Camii Balatçık,2025-11-19,88.92935709812163,GradientBoosting,ai_outputs\per_location_next_week\models\8790_5_Sok._9_Eylül_Camii_Balatçık_best_GradientBoosting.pkl
