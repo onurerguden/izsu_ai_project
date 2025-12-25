@@ -93,6 +93,154 @@ def explain_metrics(y_true, y_pred, y_probs, label_name="DÜŞÜŞ"):
 
 
 # =====================================================
+# ACADEMIC / PAPER-READY VISUALIZATIONS (NO TITLES)
+# =====================================================
+def generate_academic_visualizations_drop_rise(
+    df, features,
+    y_test_drop, drop_preds, drop_probs, drop_model,
+    y_test_rise, rise_preds, rise_probs, rise_model,
+    output_dir
+):
+    viz_dir = os.path.join(output_dir, "visualizations")
+    os.makedirs(viz_dir, exist_ok=True)
+
+    # Helper imports for metrics
+    from sklearn.metrics import accuracy_score, balanced_accuracy_score
+
+    # 1. Target distribution
+    counts = df[["Target_Drop", "Target_Rise"]].sum()
+    plt.figure(figsize=(5, 4))
+    plt.bar(["Drop", "Rise"], counts.values)
+    plt.ylabel("Sample Count")
+    plt.savefig(os.path.join(viz_dir, "target_distribution.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 2. Feature importance (Drop)
+    if hasattr(drop_model, "feature_importances_"):
+        fi = pd.Series(drop_model.feature_importances_, index=features).sort_values(ascending=False)
+        plt.figure(figsize=(6, 4))
+        plt.barh(fi.index[:10][::-1], fi.values[:10][::-1])
+        plt.xlabel("Importance")
+        plt.savefig(os.path.join(viz_dir, "feature_importance_drop.pdf"), dpi=300, bbox_inches="tight")
+        plt.close()
+
+    # 3. Feature importance (Rise)
+    if hasattr(rise_model, "feature_importances_"):
+        fi = pd.Series(rise_model.feature_importances_, index=features).sort_values(ascending=False)
+        plt.figure(figsize=(6, 4))
+        plt.barh(fi.index[:10][::-1], fi.values[:10][::-1])
+        plt.xlabel("Importance")
+        plt.savefig(os.path.join(viz_dir, "feature_importance_rise.pdf"), dpi=300, bbox_inches="tight")
+        plt.close()
+
+    # 4. Confusion matrix normalized (Drop)
+    cm = confusion_matrix(y_test_drop, drop_preds, normalize="true")
+    plt.figure(figsize=(5, 4))
+    sns.heatmap(cm, annot=True, fmt=".2f", cmap="Reds")
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
+    plt.savefig(os.path.join(viz_dir, "confusion_matrix_drop_normalized.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 5. Confusion matrix normalized (Rise)
+    cm = confusion_matrix(y_test_rise, rise_preds, normalize="true")
+    plt.figure(figsize=(5, 4))
+    sns.heatmap(cm, annot=True, fmt=".2f", cmap="Greens")
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
+    plt.savefig(os.path.join(viz_dir, "confusion_matrix_rise_normalized.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 6. Precision-Recall curve (Drop)
+    p, r, _ = precision_recall_curve(y_test_drop, drop_probs)
+    plt.figure(figsize=(5, 4))
+    plt.plot(r, p)
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.savefig(os.path.join(viz_dir, "pr_curve_drop.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 7. Precision-Recall curve (Rise)
+    p, r, _ = precision_recall_curve(y_test_rise, rise_probs)
+    plt.figure(figsize=(5, 4))
+    plt.plot(r, p)
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.savefig(os.path.join(viz_dir, "pr_curve_rise.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 8. Prediction confidence histogram (Drop)
+    plt.figure(figsize=(5, 4))
+    plt.hist(drop_probs, bins=40)
+    plt.xlabel("Predicted Probability")
+    plt.ylabel("Frequency")
+    plt.savefig(os.path.join(viz_dir, "confidence_distribution_drop.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 9. Prediction confidence histogram (Rise)
+    plt.figure(figsize=(5, 4))
+    plt.hist(rise_probs, bins=40)
+    plt.xlabel("Predicted Probability")
+    plt.ylabel("Frequency")
+    plt.savefig(os.path.join(viz_dir, "confidence_distribution_rise.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    # 9.5 Accuracy vs Balanced Accuracy (TEST) - DROP & RISE
+    drop_acc = accuracy_score(y_test_drop, drop_preds)
+    drop_bal_acc = balanced_accuracy_score(y_test_drop, drop_preds)
+
+    rise_acc = accuracy_score(y_test_rise, rise_preds)
+    rise_bal_acc = balanced_accuracy_score(y_test_rise, rise_preds)
+
+    metrics_df = pd.DataFrame({
+        "Model": ["Drop", "Drop", "Rise", "Rise"],
+        "Metric": ["Accuracy", "Balanced Accuracy", "Accuracy", "Balanced Accuracy"],
+        "Value": [drop_acc, drop_bal_acc, rise_acc, rise_bal_acc]
+    })
+
+    plt.figure(figsize=(6, 4))
+    ax = sns.barplot(
+        data=metrics_df,
+        x="Model",
+        y="Value",
+        hue="Metric"
+    )
+
+    plt.ylim(0, 1)
+    plt.ylabel("Score")
+    plt.xlabel("Task")
+
+    # Legend placed OUTSIDE (professional / paper-style)
+    ax.legend(
+        title="Metric Type",
+        loc="center left",
+        bbox_to_anchor=(1.02, 0.5),
+        frameon=False
+    )
+
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(viz_dir, "accuracy_vs_balanced_accuracy_drop_rise.pdf"),
+        dpi=300,
+        bbox_inches="tight"
+    )
+    plt.close()
+
+    # 10. Temporal distribution of final labels
+    temp = df.iloc[y_test_drop.index].copy()
+    temp["FinalLabel"] = np.where(drop_preds == 1, "Drop", np.where(rise_preds == 1, "Rise", "Stable"))
+    temp["YearMonth"] = temp["Tarih"].dt.to_period("M").astype(str)
+    trend = temp.groupby(["YearMonth", "FinalLabel"]).size().unstack(fill_value=0)
+    trend.plot(figsize=(7, 4))
+    plt.xlabel("Time")
+    plt.ylabel("Count")
+    plt.savefig(os.path.join(viz_dir, "temporal_final_labels.pdf"), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    print("[SUCCESS] Academic drop-rise visualizations generated.")
+
+
+# =====================================================
 # FEATURE ENGINEERING (BEST PRACTICE - DATA LEAKAGE FIX)
 # =====================================================
 def calculate_rsi(series, period=14):
@@ -355,10 +503,9 @@ def run_advanced_pipeline():
     # Drop Grafik
     plt.figure(figsize=(6, 5))
     cm_drop = confusion_matrix(y_test_drop, drop_preds)
-    sns.heatmap(cm_drop, annot=True, fmt='d', cmap='Reds', xticklabels=["Normal", "Düşüş"],
-                yticklabels=["Normal", "Düşüş"])
-    plt.title(f"DÜŞÜŞ - Confusion Matrix ({drop_name})")
-    plt.savefig(f"{Config.OUTPUT_DIR}/best_drop_model_{drop_name}.png")
+    sns.heatmap(cm_drop, annot=True, fmt='d', cmap='Reds', xticklabels=["Normal", "Drop"],
+                yticklabels=["Normal", "Drop"])
+    plt.savefig(f"{Config.OUTPUT_DIR}/best_drop_model_{drop_name}.pdf")
     plt.close()
 
     # --- RISE Raporu ---
@@ -368,10 +515,9 @@ def run_advanced_pipeline():
     # Rise Grafik
     plt.figure(figsize=(6, 5))
     cm_rise = confusion_matrix(y_test_rise, rise_preds)
-    sns.heatmap(cm_rise, annot=True, fmt='d', cmap='Greens', xticklabels=["Normal", "Yükseliş"],
-                yticklabels=["Normal", "Yükseliş"])
-    plt.title(f"YÜKSELİŞ - Confusion Matrix ({rise_name})")
-    plt.savefig(f"{Config.OUTPUT_DIR}/best_rise_model_{rise_name}.png")
+    sns.heatmap(cm_rise, annot=True, fmt='d', cmap='Greens', xticklabels=["Normal", "Rise"],
+                yticklabels=["Normal", "Rise"])
+    plt.savefig(f"{Config.OUTPUT_DIR}/best_rise_model_{rise_name}.pdf")
     plt.close()
 
     # 5. Feature Importance (Ağaç tabanlılar için)
@@ -407,13 +553,25 @@ def run_advanced_pipeline():
     plt.figure(figsize=(8, 6))
     cm_comb = confusion_matrix(true_labels, final_labels, labels=["DÜŞÜŞ", "SABİT", "YÜKSELİŞ"])
     sns.heatmap(cm_comb, annot=True, fmt='d', cmap='Blues',
-                xticklabels=["DÜŞÜŞ", "SABİT", "YÜKSELİŞ"],
-                yticklabels=["DÜŞÜŞ", "SABİT", "YÜKSELİŞ"])
-    plt.title("FİNAL KOMBİNE TAHMİN MATRİSİ")
-    plt.ylabel("Gerçek Durum")
-    plt.xlabel("Model Tahmini")
+                xticklabels=["Drop", "Stable", "Rise"],
+                yticklabels=["Drop", "Stable", "Rise"])
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
     plt.tight_layout()
-    plt.savefig(f"{Config.OUTPUT_DIR}/final_combined_matrix.png")
+    plt.savefig(f"{Config.OUTPUT_DIR}/final_combined_matrix.pdf")
+    generate_academic_visualizations_drop_rise(
+        df=df,
+        features=features,
+        y_test_drop=y_test_drop,
+        drop_preds=drop_preds,
+        drop_probs=drop_probs,
+        drop_model=drop_model,
+        y_test_rise=y_test_rise,
+        rise_preds=rise_preds,
+        rise_probs=rise_probs,
+        rise_model=rise_model,
+        output_dir=Config.OUTPUT_DIR
+    )
     print(f"\n[INFO] Tüm grafikler '{Config.OUTPUT_DIR}' klasörüne kaydedildi.")
 
 

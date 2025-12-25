@@ -16,6 +16,7 @@ from sklearn.metrics import (
     accuracy_score, classification_report, confusion_matrix,
     balanced_accuracy_score, f1_score, precision_score, recall_score
 )
+from sklearn.tree import plot_tree
 
 warnings.filterwarnings("ignore")
 
@@ -203,12 +204,11 @@ class WaterQualityClassifier:
             cm, annot=True, fmt="d", cmap="Blues",
             xticklabels=labels, yticklabels=labels
         )
-        plt.title(f"Confusion Matrix - {model_name}")
-        plt.ylabel("True")
-        plt.xlabel("Predicted")
+        plt.ylabel("True Label")
+        plt.xlabel("Predicted Label")
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        plt.savefig(self.output_dir / f"cm_{model_name.replace(' ', '_')}.png", bbox_inches="tight")
+        plt.savefig(self.output_dir / f"cm_{model_name.replace(' ', '_')}.pdf", bbox_inches="tight")
         plt.close()
 
     def _quality_metrics(self, y_true, y_pred):
@@ -434,12 +434,217 @@ class WaterQualityClassifier:
             if r == 0:
                 cell.set_text_props(weight="bold")
 
-        out_path = self.output_dir / "model_comparison_full_quality.png"
+        out_path = self.output_dir / "model_comparison_full_quality.pdf"
         plt.savefig(out_path, dpi=300, bbox_inches="tight")
         plt.close()
 
-        print(f"\nFull quality model karşılaştırma PNG kaydedildi: {out_path}")
+        print(f"\nFull quality model karşılaştırma PDF kaydedildi: {out_path}")
         return out_path
+
+
+    # =========================================================
+    # ACADEMIC / PAPER-READY VISUALIZATIONS (NO TITLES)
+    # =========================================================
+    def generate_academic_visualizations(self, df_results: pd.DataFrame):
+        viz_dir = self.output_dir / "visualizations"
+        viz_dir.mkdir(parents=True, exist_ok=True)
+
+        # 1. Class distribution
+        counts = self.df["RiskClass"].value_counts().sort_index()
+        plt.figure(figsize=(5, 4))
+        plt.bar(counts.index, counts.values)
+        plt.xlabel("Risk Class")
+        plt.ylabel("Sample Count")
+        plt.savefig(viz_dir / "class_distribution.pdf", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        # 2. Feature importance (Random Forest)
+        if "Random Forest" in self.models:
+            rf = self.models["Random Forest"]
+            importances = rf.feature_importances_
+            fi = pd.Series(importances, index=self.feature_cols).sort_values(ascending=False)
+            plt.figure(figsize=(6, 4))
+            plt.barh(fi.index[:15][::-1], fi.values[:15][::-1])
+            plt.xlabel("Importance")
+            plt.savefig(viz_dir / "feature_importance_rf.pdf", dpi=300, bbox_inches="tight")
+            plt.close()
+
+        # 2.5 Decision Tree visualization (paper-ready, depth-limited)
+        if "Decision Tree" in self.models:
+            dt = self.models["Decision Tree"]
+
+            plt.figure(figsize=(12, 5))
+            plot_tree(
+                dt,
+                feature_names=self.feature_cols,
+                class_names=dt.classes_,
+                filled=True,
+                rounded=True,
+                max_depth=3,
+                fontsize=6,
+                proportion=True
+            )
+
+            plt.savefig(
+                viz_dir / "decision_tree_structure.pdf",
+                dpi=300,
+                bbox_inches="tight"
+            )
+            plt.close()
+
+        # 3. Validation Macro F1 (annotated)
+        fig, ax = plt.subplots(figsize=(7.5, 4.8))
+        x = np.arange(len(df_results))
+
+        bars = ax.bar(x, df_results["Val MacroF1"])
+        ax.set_ylabel("Validation Macro F1")
+        ax.set_xticks(x)
+        ax.set_xticklabels(df_results["Model"], rotation=15)
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        for bar in bars:
+            h = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                h,
+                f"{h:.3f}",
+                ha="center",
+                va="bottom",
+                fontsize=9
+            )
+
+        plt.savefig(
+            viz_dir / "macro_f1_comparison.pdf",
+            dpi=300,
+            bbox_inches="tight"
+        )
+        plt.close()
+
+        # 4. Balanced Test Accuracy vs Test Accuracy (annotated, paper-ready)
+        fig, ax = plt.subplots(figsize=(7.8, 4.8))
+
+        x = np.arange(len(df_results))
+        width = 0.36
+
+        bars_bal_test = ax.bar(
+            x - width / 2,
+            df_results["Test BalAcc"],
+            width,
+            label="Balanced Test Accuracy"
+        )
+
+        bars_test = ax.bar(
+            x + width / 2,
+            df_results["Test Acc"],
+            width,
+            label="Test Accuracy"
+        )
+
+        ax.set_ylabel("Score")
+        ax.set_xticks(x)
+        ax.set_xticklabels(df_results["Model"], rotation=15)
+        ax.grid(axis="y", linestyle="--", alpha=0.4)
+
+        # Numeric annotations
+        for bar in bars_bal_test:
+            h = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                h,
+                f"{h:.3f}",
+                ha="center",
+                va="bottom",
+                fontsize=9
+            )
+
+        for bar in bars_test:
+            h = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                h,
+                f"{h:.3f}",
+                ha="center",
+                va="bottom",
+                fontsize=9
+            )
+
+        # Legend placed outside (paper best practice)
+        ax.legend(
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.18),
+            ncol=2,
+            frameon=False
+        )
+
+        plt.savefig(
+            viz_dir / "balanced_test_accuracy_vs_test_accuracy.pdf",
+            dpi=300,
+            bbox_inches="tight"
+        )
+        plt.close()
+
+        # 5. Train vs Validation accuracy gap
+        gap = df_results["Train Acc"] - df_results["Val Acc"]
+        plt.figure(figsize=(5, 4))
+        plt.bar(df_results["Model"], gap)
+        plt.ylabel("Accuracy Gap")
+        plt.savefig(viz_dir / "train_val_gap.pdf", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        # 6. Normalized confusion matrix (best model, test)
+        from sklearn.metrics import ConfusionMatrixDisplay
+        preds = self.best_model.predict(self.X_test_scaled)
+        disp = ConfusionMatrixDisplay.from_predictions(
+            self.y_test, preds, normalize="true"
+        )
+        disp.ax_.set_xlabel("Predicted Label")
+        disp.ax_.set_ylabel("True Label")
+        plt.savefig(viz_dir / "confusion_matrix_normalized.pdf", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        # 7. Per-class precision & recall
+        report = classification_report(self.y_test, preds, output_dict=True)
+        pr = pd.DataFrame(report).T.iloc[:-3][["precision", "recall"]]
+        pr.plot(kind="bar", figsize=(6, 4))
+        plt.ylabel("Score")
+        plt.savefig(viz_dir / "precision_recall_per_class.pdf", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        # 8. Prediction confidence distribution (SVM if available)
+        if "SVM" in self.models:
+            svm = self.models["SVM"]
+            if hasattr(svm, "decision_function"):
+                scores = svm.decision_function(self.X_test_scaled)
+                plt.figure(figsize=(5, 4))
+                plt.hist(np.ravel(scores), bins=40)
+                plt.xlabel("Decision Score")
+                plt.ylabel("Frequency")
+                plt.savefig(viz_dir / "svm_confidence_distribution.pdf", dpi=300, bbox_inches="tight")
+                plt.close()
+
+        # 9. Temporal class distribution
+        temp = self.df.copy()
+        temp["YearMonth"] = temp["Tarih"].dt.to_period("M").astype(str)
+        trend = temp.groupby(["YearMonth", "RiskClass"]).size().unstack(fill_value=0)
+        trend.plot(figsize=(7, 4))
+        plt.xlabel("Time")
+        plt.ylabel("Count")
+        plt.savefig(viz_dir / "temporal_distribution.pdf", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        # 10. HealthFactor vs predicted class
+        hf_df = self.df.iloc[self.y_test.index].copy()
+        hf_df["Predicted"] = preds
+        plt.figure(figsize=(6, 4))
+        for cls in hf_df["Predicted"].unique():
+            subset = hf_df[hf_df["Predicted"] == cls]
+            plt.scatter(subset["HealthFactor"], [cls]*len(subset), alpha=0.6)
+        plt.xlabel("Health Factor")
+        plt.ylabel("Predicted Class")
+        plt.savefig(viz_dir / "healthfactor_vs_prediction.pdf", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        print("\n[SUCCESS] Academic visualizations generated.")
 
 
 def predict_risk_classes(model_path, csv_path, output_path):
@@ -501,6 +706,7 @@ if __name__ == "__main__":
 
     clf.save_quality_table()
     clf.save_model_comparison_png(results)
+    clf.generate_academic_visualizations(results)
 
     saved_path = clf.save_best_model()
     print(f"\n[INFO] Model dosyası: {saved_path}")
