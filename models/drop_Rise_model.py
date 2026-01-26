@@ -368,6 +368,7 @@ def run_model_competition(X_train_full, y_train_full, task_name="Task"):
     """
     Verilen X ve y üzerinde 6 modeli CV ile yarıştırır.
     En iyi modeli, en iyi eşik değeriyle birlikte döndürür.
+    Ayrıca tüm modellerin ortalama F1 skorlarını bir tablo olarak döndürür.
     """
     print(f"\n{'=' * 60}")
     print(f"🏆 [VALIDATION PHASE] MODEL YARIŞMASI BAŞLIYOR: {task_name}")
@@ -376,6 +377,7 @@ def run_model_competition(X_train_full, y_train_full, task_name="Task"):
 
     models = get_models()
     results = []
+    summary_rows = []
 
     tscv = TimeSeriesSplit(n_splits=3)
 
@@ -428,6 +430,11 @@ def run_model_competition(X_train_full, y_train_full, task_name="Task"):
             "threshold": avg_thresh
         })
 
+        summary_rows.append({
+            "Model": name,
+            "Avg_F1": avg_f1
+        })
+
     # Şampiyonu Seç
     best_result = max(results, key=lambda x: x["score"])
     print(f"\n🌟 [SONUÇ] KAZANAN MODEL ({task_name}): {best_result['name']}")
@@ -446,7 +453,8 @@ def run_model_competition(X_train_full, y_train_full, task_name="Task"):
 
     final_model.fit(X_bal, y_bal)
 
-    return final_model, final_scaler, best_result["threshold"], best_result["name"]
+    summary_df = pd.DataFrame(summary_rows)
+    return final_model, final_scaler, best_result["threshold"], best_result["name"], summary_df
 
 
 # =====================================================
@@ -475,10 +483,14 @@ def run_advanced_pipeline():
     print(f"  > Test Set (Sınav): {len(X_test)} satır.")
 
     # 2. DROP Modeli İçin Yarışma ve Seçim
-    drop_model, drop_scaler, drop_thresh, drop_name = run_model_competition(X_train, y_train_drop, "DÜŞÜŞ (DROP)")
+    drop_model, drop_scaler, drop_thresh, drop_name, drop_summary = run_model_competition(
+        X_train, y_train_drop, "DÜŞÜŞ (DROP)"
+    )
 
     # 3. RISE Modeli İçin Yarışma ve Seçim
-    rise_model, rise_scaler, rise_thresh, rise_name = run_model_competition(X_train, y_train_rise, "YÜKSELİŞ (RISE)")
+    rise_model, rise_scaler, rise_thresh, rise_name, rise_summary = run_model_competition(
+        X_train, y_train_rise, "YÜKSELİŞ (RISE)"
+    )
 
     # 4. Test Setinde Final Değerlendirme
     print("\n" + "=" * 60)
@@ -572,6 +584,59 @@ def run_advanced_pipeline():
         rise_model=rise_model,
         output_dir=Config.OUTPUT_DIR
     )
+    # =====================================================
+    # MODEL COMPARISON (DROP vs RISE) - PAPER-READY (NO TITLE)
+    # =====================================================
+    viz_dir = os.path.join(Config.OUTPUT_DIR, "visualizations")
+    os.makedirs(viz_dir, exist_ok=True)
+
+    # Prepare long-format dataframe for plotting
+    drop_plot = drop_summary.copy()
+    drop_plot["Task"] = "Drop"
+    drop_plot.rename(columns={"Avg_F1": "F1"}, inplace=True)
+
+    rise_plot = rise_summary.copy()
+    rise_plot["Task"] = "Rise"
+    rise_plot.rename(columns={"Avg_F1": "F1"}, inplace=True)
+
+    compare_df = pd.concat([drop_plot, rise_plot], ignore_index=True)
+
+    # Order models by mean performance (professional ordering)
+    order = (
+        compare_df.groupby("Model")["F1"]
+        .mean()
+        .sort_values(ascending=True)
+        .index.tolist()
+    )
+
+    plt.figure(figsize=(7, 4))
+    ax = sns.barplot(
+        data=compare_df,
+        y="Model",
+        x="F1",
+        hue="Task",
+        order=order
+    )
+
+    plt.xlim(0, 1)
+    plt.xlabel("F1 Score")
+    plt.ylabel("Model")
+
+    # Legend outside (paper-style), no title
+    ax.legend(
+        title="Task",
+        loc="center left",
+        bbox_to_anchor=(1.02, 0.5),
+        frameon=False
+    )
+
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(viz_dir, "model_comparison_drop_rise.pdf"),
+        dpi=300,
+        bbox_inches="tight"
+    )
+    plt.close()
     print(f"\n[INFO] Tüm grafikler '{Config.OUTPUT_DIR}' klasörüne kaydedildi.")
 
 

@@ -54,6 +54,19 @@ class IzsuVisualizer:
 
         corr = self.df_features[cols].corr()
 
+        label_map = {
+            "Alüminyum": "Aluminum",
+            "Arsenik": "Arsenic",
+            "Demir": "Iron",
+            "Klorür": "Chloride",
+            "pH": "pH",
+            "İletkenlik": "Conductivity",
+            "Oksitlenebilirlik": "Oxidizability",
+            "HealthFactor": "Health Factor"
+        }
+
+        corr = corr.rename(index=label_map, columns=label_map)
+
         plt.figure(figsize=(10, 8))
         sns.heatmap(
             corr,
