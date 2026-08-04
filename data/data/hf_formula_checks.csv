@@ -1,0 +1,9 @@
+﻿Check,Expected,Observed,Passed
+Configured WAWQI unit weights sum to one,1.0,1.0,True
+Classification threshold at HF=85.0,Good,Good,True
+Classification threshold at HF=84.999,Caution,Caution,True
+Classification threshold at HF=60.0,Caution,Caution,True
+Classification threshold at HF=59.999,Risk,Risk,True
+All numeric parameters at ideal values produce HF=100,100.0,100.0,True
+Zero-standard E.coli violation avoids division and triggers Risk,"HF=0, Risk","HF=0.0, Risk",True
+Arsenic above Sn triggers immediate Risk,"HF=0, Risk","HF=0.0, Risk",True

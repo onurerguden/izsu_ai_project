@@ -1,0 +1,10 @@
+﻿ManuscriptFigure,File,GeneratedBy,Description
+Figure 7,figures/figure_07_best_multiclass_confusion_matrix.png,proactive_trend_model.py,Test confusion matrix for selected model (Random Forest).
+Figure 8,figures/figure_08_drop_binary_confusion_matrix.png,proactive_trend_model.py,One-vs-rest Drop confusion matrix for selected model.
+Figure 9,figures/figure_09_rise_binary_confusion_matrix.png,proactive_trend_model.py,One-vs-rest Rise confusion matrix for selected model.
+Figure 10,figures/figure_10_accuracy_vs_balanced_accuracy.png,proactive_trend_model.py,Accuracy and balanced accuracy comparison across models.
+Figure 11,figures/figure_11_temporal_predicted_labels.png,proactive_trend_model.py,Monthly temporal distribution of selected model predictions on test data.
+Supplementary,figures/proactive_model_comparison.png,proactive_trend_model.py,"Accuracy, balanced accuracy, Macro F1 and MCC comparison."
+Supplementary,figures/trend_class_distribution.png,proactive_trend_model.py,"Drop, Stable and Rise distribution by split."
+Supplementary,figures/horizon_days_distribution.png,proactive_trend_model.py,Actual days to the next available observation.
+Supplementary,figures/best_model_feature_importance.png,proactive_trend_model.py,Top feature importances for Random Forest.

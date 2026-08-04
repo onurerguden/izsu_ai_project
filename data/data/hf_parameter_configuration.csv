@@ -1,0 +1,19 @@
+﻿Parameter,Unit,Standard_Sn,Ideal_Vi,Type,Category,FailFast,IncludedInWAWQI,UnitWeight_Wn
+E.coli,Sayı/100 ml,0.0,0.0,zero_standard,Microbiological,True,False,
+Koliform Bakteri,Sayı/100 ml,0.0,0.0,zero_standard,Microbiological,True,False,
+C.Perfringens,Sayı/100 ml,0.0,0.0,zero_standard,Microbiological,True,False,
+Arsenik,μg/L,10.0,0.0,numeric,Toxic,True,True,0.022626158697495402
+Nitrit,mg/L,0.5,0.0,numeric,Toxic,True,True,0.45252317394990804
+Amonyum,mg/L,0.5,0.0,numeric,Industrial,False,True,0.45252317394990804
+Alüminyum,μg/L,200.0,0.0,numeric,Industrial,False,True,0.00113130793487477
+Demir,μg/L,200.0,0.0,numeric,Industrial,False,True,0.00113130793487477
+Klorür,mg/L,250.0,0.0,numeric,Industrial,False,True,0.0009050463478998161
+İletkenlik,μS/cm,2500.0,0.0,numeric,Industrial,False,True,9.05046347899816e-05
+Oksitlenebilirlik,mg/L O2,5.0,0.0,numeric,Industrial,False,True,0.045252317394990804
+pH,-,6.5–9.5,7.0,range,Physical,False,True,0.023817009155258317
+Bulanıklık,-,Not numerically defined,-,acceptable,Physical/Aesthetic,False,False,
+Tat,-,Not numerically defined,-,acceptable,Aesthetic,False,False,
+Koku,-,Not numerically defined,-,acceptable,Aesthetic,False,False,
+Renk,-,Not numerically defined,-,acceptable,Aesthetic,False,False,
+Toplam Sertlik,Fr,Not numerically defined,-,descriptive,Descriptive,False,False,
+Tuzluluk,%0,Not numerically defined,-,descriptive,Descriptive,False,False,

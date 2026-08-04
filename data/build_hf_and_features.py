@@ -1,380 +1,533 @@
-from pathlib import Path
-import pandas as pd
-import numpy as np
+"""
+build_hf_and_features.py
+
+Builds the two model-ready İzSU datasets from izsu_data_cleaned.csv:
+
+- izsu_health_factor.csv
+- izsu_features.csv
+
+All Health Factor, WAWQI, parameter-score, fail-fast and class calculations are
+performed by utils.hf_calculator. This file does not contain a second HF formula.
+
+It also writes reviewer-facing validation outputs after each successful run:
+
+- hf_parameter_configuration.csv
+- hf_formula_checks.csv
+- hf_validation_summary.csv
+- HF_Technical_Validation_Report.docx
+"""
+
+from __future__ import annotations
+
+import sys
 from datetime import datetime
-import re
+from pathlib import Path
+from typing import Iterable
 
-PARAM_NAMES = [
-    "E.coli",
-    "Koliform Bakteri",
-    "C.Perfringens",
-    "Arsenik",
-    "Nitrit",
-    "Alüminyum",
-    "Demir",
-    "Amonyum",
-    "pH",
-    "Klorür",
-    "İletkenlik",
-    "Oksitlenebilirlik",
-    "Bulanıklık",
-    "Tat",
-    "Koku",
-    "Renk",
-    "Toplam Sertlik",
-    "Tuzluluk",
-]
+import pandas as pd
 
-
-LIMITS = {                             #Sn
-    ("Arsenik", "μg/L"): 10.0,
-    ("Alüminyum", "μg/L"): 200.0,
-    ("Demir", "μg/L"): 200.0,
-    ("Nitrit", "mg/L"): 0.5,
-    ("Amonyum", "mg/L"): 0.5,
-    ("Klorür", "mg/L"): 250.0,
-    ("Oksitlenebilirlik", "mg/L O2"): 5.0,
-    ("pH", "range"): (6.5, 9.5),
-    ("İletkenlik", "µS/cm"): 2500.0,
-    ("E.coli", "Sayı/100 ml"): 0.0,
-    ("Koliform Bakteri", "Sayı/100 ml"): 0.0,
-    ("C.Perfringens", "Sayı/100 ml"): 0.0,
-    ("Bulanıklık", "acceptable"): None,
-    ("Tat", "acceptable"): None,
-    ("Koku", "acceptable"): None,
-    ("Renk", "acceptable"): None,
-    ("Toplam Sertlik", "mg/L as CaCO3"): None,
-    ("Tuzluluk", "ppt"): None,
-}
 
 STATE_NAME = "last_hf_success_date.txt"
+HF_OUTPUT_NAME = "izsu_health_factor.csv"
+FEATURE_OUTPUT_NAME = "izsu_features.csv"
 
 
-def scoring_param_name(p: str) -> str:
-    if not isinstance(p, str):
-        return ""
-    s = p.strip()
-    low = s.lower()
+# ---------------------------------------------------------------------------
+# Import the single, central HF implementation from the project utils folder.
+# This remains robust when this script is stored in project_root/data/.
+# ---------------------------------------------------------------------------
+def _add_project_root_to_path(script_path: Path) -> Path:
+    candidates = [
+        script_path.parent,
+        script_path.parent.parent,
+        Path.cwd(),
+    ]
 
-    if low.replace(" ", "") in {"e.coli", "ecoli", "e-coli"}:
-        return "E.coli"
+    for candidate in candidates:
+        if (candidate / "utils" / "hf_calculator.py").exists():
+            resolved = candidate.resolve()
+            if str(resolved) not in sys.path:
+                sys.path.insert(0, str(resolved))
+            return resolved
 
-    if low == "koliform bakteri":
-        return "Koliform Bakteri"
-    if low == "c.perfringens":
-        return "C.Perfringens"
-
-    return s
-
-
-def standardize_to(value: float, unit: str, target: str):
-    if pd.isna(value) or not isinstance(unit, str):
-        return np.nan
-    u = unit.strip().replace("µ", "μ")
-    t = target.strip().replace("µ", "μ")
-    if u == t:
-        return float(value)
-    if (u, t) == ("μg/L", "mg/L"):
-        return float(value) / 1000.0
-    if (u, t) == ("mg/L", "μg/L"):
-        return float(value) * 1000.0
-    return np.nan
+    searched = "\n".join(str(path / "utils" / "hf_calculator.py") for path in candidates)
+    raise FileNotFoundError(
+        "utils/hf_calculator.py bulunamadı. Kontrol edilen yollar:\n" + searched
+    )
 
 
-def score_acceptable(raw_value: str) -> float:
-    if not isinstance(raw_value, str):
-        return np.nan
-    s = raw_value.strip().lower()
-    if re.fullmatch(r"(uygun|geçerli|gecerli|0|yok|nd|-|—)", s):
-        return 1.0
-    return np.nan
+SCRIPT_PATH = Path(__file__).resolve()
+PROJECT_ROOT = _add_project_root_to_path(SCRIPT_PATH)
+
+from utils.hf_calculator import (  # noqa: E402
+    calculate_hf_for_group,
+    parameter_configuration_table,
+    validate_formula_invariants,
+    validation_summary_table,
+    write_docx_report,
+)
+from utils.parameters import PARAMETERS, canonical_parameter_name  # noqa: E402
 
 
-def fail_fast_trigger(param: str, value: float, unit: str) -> bool:
-    p = scoring_param_name(param)
-    if p == "E.coli":
-        return (not pd.isna(value)) and value > 0
-    if p == "Arsenik":
-        v = standardize_to(value, unit, "μg/L")
-        return (not pd.isna(v)) and v > 10.0
-    if p == "Nitrit":
-        v = standardize_to(value, unit, "mg/L")
-        return (not pd.isna(v)) and v > 0.5
-    return False
+# ---------------------------------------------------------------------------
+# File and date helpers
+# ---------------------------------------------------------------------------
+def find_clean_csv(script_path: Path) -> tuple[Path, Path]:
+    """Find izsu_data_cleaned.csv and return its directory and path."""
 
-
-def compute_qn_linear(value: float, limit: float, ideal: float = 0.0) -> float:
-    if pd.isna(value) or pd.isna(limit) or limit <= ideal:
-        return np.nan
-    return float(abs(value - ideal) / (limit - ideal) * 100.0)
-
-
-def compute_qn_ph(ph: float, lo: float, hi: float, ideal: float = 7.0) -> float:
-    if pd.isna(ph):
-        return np.nan
-    if ph >= ideal:
-        denom = hi - ideal
-    else:
-        denom = ideal - lo
-    if denom <= 0:
-        return np.nan
-    return float(abs(ph - ideal) / denom * 100.0)
-
-
-def get_numeric_limit(param: str):
-    for (p, u), val in LIMITS.items():
-        if p != param:
-            continue
-        if val is None:
-            continue
-        if u in ("range", "acceptable", "Sayı/100 ml"):
-            continue
-        return float(val), u
-    return None, None
-
-S_NUMERIC = {}
-
-for (p, u), val in LIMITS.items():
-    if val is None:
-        continue
-    if u == "range":
-        if p == "pH":
-            lo, hi = val
-            S_NUMERIC[p] = float(hi)
-        continue
-    if u in ("acceptable", "Sayı/100 ml"):
-        continue
-    if p not in S_NUMERIC:
-        S_NUMERIC[p] = float(val)
-
-if S_NUMERIC:
-    K = 1.0 / sum(1.0 / v for v in S_NUMERIC.values())
-    W_UNIT = {p: K / v for p, v in S_NUMERIC.items()}
-else:
-    K = 0.0
-    W_UNIT = {}
-
-def classify_hf(hf: float, fail_fast: bool) -> str:
-    if fail_fast:
-        return "Risk"
-    if pd.isna(hf):
-        return "Unknown"
-    if hf >= 85:
-        return "Good"
-    if hf >= 60:
-        return "Caution"
-    return "Risk"
-
-
-def find_clean_yeni_csv(script_path: Path) -> tuple[Path, Path]:
     script_dir = script_path.parent
     candidates = [
         script_dir / "izsu_data_cleaned.csv",
         script_dir / "data" / "izsu_data_cleaned.csv",
         script_dir.parent / "data" / "izsu_data_cleaned.csv",
+        script_dir.parent / "data" / "data" / "izsu_data_cleaned.csv",
+        Path.cwd() / "izsu_data_cleaned.csv",
+        Path.cwd() / "data" / "izsu_data_cleaned.csv",
+        Path.cwd() / "data" / "data" / "izsu_data_cleaned.csv",
     ]
-    for p in candidates:
-        if p.exists():
-            return p.parent, p
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if resolved.exists():
+            return resolved.parent, resolved
+
     return script_dir, script_dir / "izsu_data_cleaned.csv"
 
 
 def read_state_date(path: Path):
     if not path.exists():
         return None
-    txt = path.read_text(encoding="utf-8").strip()
+
+    text = path.read_text(encoding="utf-8").strip()
     for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
         try:
-            return datetime.strptime(txt, fmt).date()
+            return datetime.strptime(text, fmt).date()
         except ValueError:
             continue
-    return None
+
+    raise ValueError(
+        f"State tarihi okunamadı: {path}. Beklenen biçim YYYY-MM-DD veya DD.MM.YYYY."
+    )
 
 
-def compute_scores_for_row(group_df: pd.DataFrame) -> dict:
-    out_scores: dict[str, float] = {}
-    q_values: dict[str, float] = {}
-    ff = False
+def normalize_iso_dates(df: pd.DataFrame, column: str = "Tarih") -> pd.DataFrame:
+    """Normalize date values so incremental duplicate removal is type-safe."""
 
-    by_param = group_df.groupby("ParametreAdi", dropna=False)
-
-    for param_raw, sub in by_param:
-        p = scoring_param_name(param_raw)
-
-        v = pd.to_numeric(sub["Deger"], errors="coerce").astype(float).mean(skipna=True)
-
-        unit_series = sub["Birim"].dropna().astype(str)
-        unit = None if unit_series.empty else unit_series.iloc[0].replace("µ", "μ")
-
-        raw_series = sub["DegerRaw"].dropna().astype(str)
-        raw_sample = None if raw_series.empty else raw_series.iloc[0]
-
-        if fail_fast_trigger(p, v, unit or ""):
-            ff = True
-
-        qn = np.nan
-
-        if (p, "Sayı/100 ml") in LIMITS:
-            if pd.isna(v):
-                qn = np.nan
-            else:
-                qn = 0.0 if float(v) == 0.0 else 100.0
-
-        elif (p, "range") in LIMITS and p == "pH":
-            lo, hi = LIMITS[(p, "range")]
-            qn = compute_qn_ph(v, lo, hi, ideal=7.0)
-
-        else:
-            limit_val, limit_unit = get_numeric_limit(p)
-            if limit_val is not None:
-                vv = standardize_to(v, unit or limit_unit, limit_unit)
-                qn = compute_qn_linear(vv, limit_val, ideal=0.0)
-
-            elif (p, "acceptable") in LIMITS:
-                ok = score_acceptable(str(raw_sample) if raw_sample is not None else "")
-                if not pd.isna(ok):
-                    qn = 0.0 if ok == 1.0 else 100.0
-                else:
-                    qn = np.nan
-            else:
-                qn = np.nan
-
-        q_values[p] = qn
-
-        if not pd.isna(qn):
-            score = max(0.0, 1.0 - max(qn, 0.0) / 100.0)
-        else:
-            score = np.nan
-        out_scores[p] = score
-
-    num, den = 0.0, 0.0
-    for p, qn in q_values.items():
-        if p not in W_UNIT:
-            continue
-        if pd.isna(qn):
-            continue
-        w = W_UNIT[p]
-        num += w * qn
-        den += w
-
-    if den == 0.0:
-        wqi = np.nan
-    else:
-        wqi = num / den
-
-    if pd.isna(wqi):
-        hf = np.nan
-    else:
-        hf = max(0.0, 100.0 - wqi)
-
-    return {"scores": out_scores, "fail_fast": ff, "hf": hf}
+    result = df.copy()
+    parsed = pd.to_datetime(result[column], errors="coerce")
+    result[column] = parsed.dt.strftime("%Y-%m-%d")
+    return result
 
 
-def main():
-    script_path = Path(__file__).resolve()
-    data_dir, in_path = find_clean_yeni_csv(script_path)
+def atomic_write_csv(df: pd.DataFrame, path: Path) -> None:
+    """Write a CSV atomically so state is never advanced before durable output."""
 
-    if not in_path.exists():
-        print(f"[!] Girdi yok: {in_path}")
-        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    df.to_csv(temporary, index=False, encoding="utf-8-sig")
+    temporary.replace(path)
 
-    hf_out_path = data_dir / "izsu_health_factor.csv"
-    feat_out_path = data_dir / "izsu_features.csv"
-    state = data_dir / STATE_NAME
 
-    # Başlangıç tarihi yalnızca state dosyasından okunur.
-    # Mevcut HF veya features CSV dosyalarındaki maksimum tarihler
-    # artık başlangıç tarihini değiştirmez.
-    last_date = read_state_date(state)
+def first_nonempty(series: pd.Series):
+    values = series.dropna()
+    if values.empty:
+        return pd.NA
 
-    print(f"[i] Girdi: {in_path}")
-    if last_date:
-        print(f"[i] Başlangıç için kullanılan son tarih (yalnızca state): {last_date}")
+    if values.dtype == object:
+        text_values = values.astype(str).str.strip()
+        text_values = text_values[text_values != ""]
+        if text_values.empty:
+            return pd.NA
+        return text_values.iloc[0]
 
-    raw = pd.read_csv(in_path, encoding="utf-8-sig")
+    return values.iloc[0]
 
-    work = pd.DataFrame()
-    work["Tarih"] = pd.to_datetime(raw["Tarih_Clean"], errors="coerce").dt.date
-    work["NoktaAdi"] = raw["NoktaAdi_Clean"]
-    work["ParametreAdi"] = raw["ParametreAdi_Clean"]
-    work["Birim"] = raw["Birim_Clean"]
-    work["Deger"] = raw["Deger_Num"]
-    work["DegerRaw"] = raw["DegerRaw"]
+
+def build_work_dataframe(raw: pd.DataFrame) -> pd.DataFrame:
+    """Select and normalize the columns required by HF and feature building."""
+
+    column_choices = {
+        "Tarih": ("Tarih_Clean", "Tarih"),
+        "NoktaAdi": ("NoktaAdi_Clean", "NoktaAdi"),
+        "ParametreAdi": ("ParametreAdi_Clean", "ParametreAdi"),
+        "Birim": ("Birim_Clean", "Birim"),
+        "Deger": ("Deger_Num", "Deger"),
+        "DegerRaw": ("DegerRaw", "Deger"),
+    }
+
+    selected: dict[str, pd.Series] = {}
+    for output_name, candidates in column_choices.items():
+        source = next((name for name in candidates if name in raw.columns), None)
+        if source is None:
+            raise ValueError(
+                f"Girdi CSV içinde '{output_name}' için uygun sütun bulunamadı: {candidates}"
+            )
+        selected[output_name] = raw[source]
+
+    work = pd.DataFrame(selected)
+
+    # Preserve point metadata when available. These fields are useful for the
+    # reviewer-facing data summary and prevent two points with the same name
+    # from being treated as one physical sampling point.
+    metadata_columns = [
+        "NoktaId",
+        "NoktaTanimi",
+        "Ilce",
+        "IlceKodu",
+        "NoktaKodu",
+        "Enlem",
+        "Boylam",
+    ]
+    for column in metadata_columns:
+        work[column] = raw[column] if column in raw.columns else pd.NA
+
+    work["Tarih"] = pd.to_datetime(work["Tarih"], errors="coerce").dt.date
+    work["NoktaAdi"] = work["NoktaAdi"].astype("string").str.strip()
+    work["ParametreAdi"] = work["ParametreAdi"].map(canonical_parameter_name)
+    work["Deger"] = pd.to_numeric(work["Deger"], errors="coerce")
 
     work = work.dropna(subset=["Tarih", "NoktaAdi", "ParametreAdi"])
+    work = work[work["NoktaAdi"] != ""]
+    work = work[work["ParametreAdi"] != ""]
 
-    if last_date:
-        work = work[work["Tarih"] > last_date]
+    return work.reset_index(drop=True)
 
-    if work.empty:
-        print("[i] Hesaplanacak yeni kayıt yok. Çıkılıyor.")
-        return
 
-    groups = work.groupby(["Tarih", "NoktaAdi"], dropna=False)
-    rows = []
-    for (dt, pt), g in groups:
-        res = compute_scores_for_row(g)
-        row = {
-            "Tarih": dt,
-            "NoktaAdi": pt,
-            "HealthFactor": res["hf"],
-            "FailFast": res["fail_fast"],
-        }
-        for p in PARAM_NAMES:
-            row[f"{p}_score"] = res["scores"].get(p, np.nan)
-        row["RiskClass"] = classify_hf(row["HealthFactor"], row["FailFast"])
-        rows.append(row)
+# ---------------------------------------------------------------------------
+# HF and feature construction
+# ---------------------------------------------------------------------------
+def group_identity_columns(work: pd.DataFrame) -> list[str]:
+    """Use physical point ID when available; otherwise fall back to point name."""
 
-    hf_new = (
-        pd.DataFrame(rows)
-        .sort_values(["Tarih", "NoktaAdi"])
+    if "NoktaId" in work.columns and work["NoktaId"].notna().any():
+        return ["Tarih", "NoktaId"]
+    return ["Tarih", "NoktaAdi"]
+
+
+def metadata_for_group(group: pd.DataFrame) -> dict:
+    fields = [
+        "NoktaId",
+        "NoktaAdi",
+        "NoktaTanimi",
+        "Ilce",
+        "IlceKodu",
+        "NoktaKodu",
+        "Enlem",
+        "Boylam",
+    ]
+    return {
+        field: first_nonempty(group[field])
+        for field in fields
+        if field in group.columns
+    }
+
+
+def calculate_hf_rows(work: pd.DataFrame) -> pd.DataFrame:
+    rows: list[dict] = []
+    identity_columns = group_identity_columns(work)
+
+    for identity, group in work.groupby(identity_columns, dropna=False, sort=True):
+        if not isinstance(identity, tuple):
+            identity = (identity,)
+
+        date_value = identity[0]
+        result = calculate_hf_for_group(
+            group,
+            parameter_col="ParametreAdi",
+            value_col="Deger",
+            unit_col="Birim",
+            raw_value_col="DegerRaw",
+        )
+
+        rows.append(
+            {
+                "Tarih": date_value,
+                **metadata_for_group(group),
+                **result,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+
+    result_df = pd.DataFrame(rows)
+    result_df = normalize_iso_dates(result_df)
+
+    ordered_prefix = [
+        "Tarih",
+        "NoktaId",
+        "NoktaAdi",
+        "NoktaTanimi",
+        "Ilce",
+        "IlceKodu",
+        "NoktaKodu",
+        "Enlem",
+        "Boylam",
+        "HealthFactor",
+        "WAWQI",
+        "FailFast",
+        "FailFastReason",
+        "RiskClass",
+        "WAWQICoverage",
+        "WAWQIParametersUsed",
+        "WAWQIParameterList",
+    ]
+    score_columns = [f"{name}_score" for name in PARAMETERS]
+    ordered = [column for column in ordered_prefix + score_columns if column in result_df.columns]
+    remaining = [column for column in result_df.columns if column not in ordered]
+
+    return (
+        result_df[ordered + remaining]
+        .sort_values(["Tarih", "NoktaId", "NoktaAdi"], na_position="last")
         .reset_index(drop=True)
     )
 
-    wide_vals = (
-        work
-        .pivot_table(
-            index=["Tarih", "NoktaAdi"],
+
+def build_wide_parameter_values(work: pd.DataFrame) -> pd.DataFrame:
+    identity_columns = group_identity_columns(work)
+
+    metadata_fields = [
+        column
+        for column in [
+            "NoktaAdi",
+            "NoktaTanimi",
+            "Ilce",
+            "IlceKodu",
+            "NoktaKodu",
+            "Enlem",
+            "Boylam",
+        ]
+        if column not in identity_columns
+    ]
+
+    metadata = (
+        work.groupby(identity_columns, dropna=False, sort=True)[metadata_fields]
+        .agg(first_nonempty)
+        .reset_index()
+    )
+
+    wide_values = (
+        work.pivot_table(
+            index=identity_columns,
             columns="ParametreAdi",
             values="Deger",
             aggfunc="mean",
         )
         .reset_index()
     )
+    wide_values.columns.name = None
 
-    features_new = pd.merge(wide_vals, hf_new, on=["Tarih", "NoktaAdi"], how="left")
+    wide_values = pd.merge(
+        metadata,
+        wide_values,
+        on=identity_columns,
+        how="outer",
+        validate="one_to_one",
+    )
+    return normalize_iso_dates(wide_values)
 
-    if hf_out_path.exists():
-        base = pd.read_csv(hf_out_path, encoding="utf-8-sig")
-        hf_all = pd.concat([base, hf_new], ignore_index=True)
-        hf_all = hf_all.drop_duplicates(subset=["Tarih", "NoktaAdi"], keep="last")
+
+def merge_features(work: pd.DataFrame, hf_new: pd.DataFrame) -> pd.DataFrame:
+    wide_values = build_wide_parameter_values(work)
+
+    has_point_ids = "NoktaId" in hf_new.columns and hf_new["NoktaId"].notna().any()
+    merge_keys = ["Tarih", "NoktaId"] if has_point_ids else ["Tarih", "NoktaAdi"]
+
+    # Metadata is retained from the HF table; remove duplicate metadata from
+    # the wide table before merging.
+    duplicate_metadata = [
+        column
+        for column in [
+            "NoktaAdi",
+            "NoktaTanimi",
+            "Ilce",
+            "IlceKodu",
+            "NoktaKodu",
+            "Enlem",
+            "Boylam",
+        ]
+        if column in wide_values.columns and column not in merge_keys
+    ]
+    parameter_values = wide_values.drop(columns=duplicate_metadata)
+
+    features = pd.merge(
+        hf_new,
+        parameter_values,
+        on=merge_keys,
+        how="left",
+        validate="one_to_one",
+    )
+
+    parameter_order = [name for name in PARAMETERS if name in features.columns]
+    prefix = [column for column in hf_new.columns if column in features.columns]
+    remaining = [
+        column
+        for column in features.columns
+        if column not in prefix and column not in parameter_order
+    ]
+
+    return features[prefix + parameter_order + remaining]
+
+
+def deduplication_keys(df: pd.DataFrame) -> list[str]:
+    if "NoktaId" in df.columns and df["NoktaId"].notna().any():
+        return ["Tarih", "NoktaId"]
+    return ["Tarih", "NoktaAdi"]
+
+
+def append_and_replace_existing(path: Path, new_df: pd.DataFrame) -> pd.DataFrame:
+    """Append incremental rows and let recalculated rows replace older versions."""
+
+    new_normalized = normalize_iso_dates(new_df)
+    base = None
+
+    if not path.exists():
+        combined = new_normalized
     else:
-        hf_all = hf_new
+        base = pd.read_csv(path, encoding="utf-8-sig")
+        base = normalize_iso_dates(base)
+        combined = pd.concat([base, new_normalized], ignore_index=True, sort=False)
 
-    if feat_out_path.exists():
-        base = pd.read_csv(feat_out_path, encoding="utf-8-sig")
-        features_all = pd.concat([base, features_new], ignore_index=True)
-        features_all = features_all.drop_duplicates(subset=["Tarih", "NoktaAdi"], keep="last")
+    # During migration from an older output without NoktaId, use the compatible
+    # date-name key once. Fresh outputs use the stable physical point ID.
+    new_has_ids = "NoktaId" in new_normalized.columns and new_normalized["NoktaId"].notna().any()
+    base_has_ids = (
+        base is None
+        or ("NoktaId" in base.columns and base["NoktaId"].notna().any())
+    )
+    keys = ["Tarih", "NoktaId"] if new_has_ids and base_has_ids else ["Tarih", "NoktaAdi"]
+    combined = combined.drop_duplicates(subset=keys, keep="last")
+
+    sort_columns = [column for column in ["Tarih", "NoktaId", "NoktaAdi"] if column in combined.columns]
+    return combined.sort_values(sort_columns, na_position="last").reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Reviewer-facing validation/report outputs
+# ---------------------------------------------------------------------------
+def write_validation_outputs(
+    *,
+    cleaned_raw: pd.DataFrame,
+    hf_all: pd.DataFrame,
+    data_dir: Path,
+    input_path: Path,
+) -> None:
+    parameter_table = parameter_configuration_table()
+    formula_checks = validate_formula_invariants()
+    summary_table = validation_summary_table(cleaned_raw, hf_all, formula_checks)
+
+    atomic_write_csv(parameter_table, data_dir / "hf_parameter_configuration.csv")
+    atomic_write_csv(formula_checks, data_dir / "hf_formula_checks.csv")
+    atomic_write_csv(summary_table, data_dir / "hf_validation_summary.csv")
+
+    report_path = data_dir / "HF_Technical_Validation_Report.docx"
+    try:
+        write_docx_report(
+            output_path=report_path,
+            input_path=input_path,
+            parameter_table=parameter_table,
+            summary_table=summary_table,
+            formula_checks=formula_checks,
+        )
+        print(f"[✓] Teknik HF raporu: {report_path}")
+    except Exception as exc:
+        print(f"[UYARI] Word raporu üretilemedi: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# Main pipeline
+# ---------------------------------------------------------------------------
+def main() -> None:
+    data_dir, input_path = find_clean_csv(SCRIPT_PATH)
+
+    if not input_path.exists():
+        print(f"[HATA] Girdi bulunamadı: {input_path}")
+        return
+
+    hf_output_path = data_dir / HF_OUTPUT_NAME
+    feature_output_path = data_dir / FEATURE_OUTPUT_NAME
+    state_path = data_dir / STATE_NAME
+
+    last_date = read_state_date(state_path)
+
+    print(f"[i] Proje kökü : {PROJECT_ROOT}")
+    print(f"[i] Girdi       : {input_path}")
+    if last_date is None:
+        print("[i] State yok: temiz verinin tamamı hesaplanacak.")
     else:
-        features_all = features_new
+        print(f"[i] Yalnızca state kullanılıyor; son işlenen tarih: {last_date}")
 
-    hf_all = hf_all.sort_values(["Tarih", "NoktaAdi"]).reset_index(drop=True)
-    features_all = features_all.sort_values(["Tarih", "NoktaAdi"]).reset_index(drop=True)
+    if last_date and (not hf_output_path.exists() or not feature_output_path.exists()):
+        print(
+            "[UYARI] State dosyası var ancak HF/features çıktılarından biri yok. "
+            "Bu çalıştırma yalnızca state tarihinden sonraki kayıtları üretecektir. "
+            "Tam yeniden üretim için last_hf_success_date.txt dosyasını silin."
+        )
 
-    hf_all.to_csv(hf_out_path, index=False, encoding="utf-8-sig")
-    features_all.to_csv(feat_out_path, index=False, encoding="utf-8-sig")
+    cleaned_raw = pd.read_csv(input_path, encoding="utf-8-sig")
+    work_all = build_work_dataframe(cleaned_raw)
+
+    if last_date is not None:
+        work_new = work_all[work_all["Tarih"] > last_date].copy()
+    else:
+        work_new = work_all.copy()
+
+    if work_new.empty:
+        print("[i] Hesaplanacak yeni tarih-nokta kaydı yok.")
+        if hf_output_path.exists():
+            hf_all = pd.read_csv(hf_output_path, encoding="utf-8-sig")
+            hf_all = normalize_iso_dates(hf_all)
+            write_validation_outputs(
+                cleaned_raw=cleaned_raw,
+                hf_all=hf_all,
+                data_dir=data_dir,
+                input_path=input_path,
+            )
+        return
+
+    hf_new = calculate_hf_rows(work_new)
+    features_new = merge_features(work_new, hf_new)
+
+    hf_all = append_and_replace_existing(hf_output_path, hf_new)
+    features_all = append_and_replace_existing(feature_output_path, features_new)
+
+    # First persist both datasets. Advance state only after both writes succeed.
+    atomic_write_csv(hf_all, hf_output_path)
+    atomic_write_csv(features_all, feature_output_path)
 
     max_date = pd.to_datetime(hf_all["Tarih"], errors="coerce").dt.date.max()
     if pd.notna(max_date):
-        state.write_text(max_date.strftime("%Y-%m-%d"), encoding="utf-8")
+        state_path.write_text(max_date.strftime("%Y-%m-%d"), encoding="utf-8")
+
+    write_validation_outputs(
+        cleaned_raw=cleaned_raw,
+        hf_all=hf_all,
+        data_dir=data_dir,
+        input_path=input_path,
+    )
+
+    class_counts = hf_all["RiskClass"].value_counts(dropna=False).to_dict()
 
     print("--------------------------------------------------")
-    print("HF & Features (incremental, WAWQI) tamamlandı")
-    print(f"Yeni HF satırı: {len(hf_new)} | Toplam HF: {len(hf_all)}")
-    print(f"Yeni features: {len(features_new)} | Toplam features: {len(features_all)}")
-    print(f"Son tarih: {max_date}")
-    print(f"HF CSV   : {hf_out_path}")
-    print(f"Feat CSV : {feat_out_path}")
+    print("HF & Features tamamlandı — merkezi utils.hf_calculator kullanıldı")
+    print(f"Yeni HF satırı       : {len(hf_new)}")
+    print(f"Toplam HF satırı     : {len(hf_all)}")
+    print(f"Yeni feature satırı  : {len(features_new)}")
+    print(f"Toplam feature satırı: {len(features_all)}")
+    print(f"Son tarih             : {max_date}")
+    print(
+        "Sınıf dağılımı       : "
+        f"Good={class_counts.get('Good', 0)}, "
+        f"Caution={class_counts.get('Caution', 0)}, "
+        f"Risk={class_counts.get('Risk', 0)}, "
+        f"Unknown={class_counts.get('Unknown', 0)}"
+    )
+    print(f"HF CSV                : {hf_output_path}")
+    print(f"Features CSV          : {feature_output_path}")
     print("--------------------------------------------------")
 
 

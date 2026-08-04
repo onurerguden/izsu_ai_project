@@ -1,0 +1,4 @@
+﻿Split,Rows,UniqueDates,StartDate,EndDate,Drop,Stable,Rise
+Train,1063,30,2025-08-06,2026-04-01,497,82,484
+Validation,184,6,2026-04-08,2026-05-13,80,21,83
+Test,234,7,2026-05-20,2026-07-08,82,36,116

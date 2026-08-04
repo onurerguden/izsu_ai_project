@@ -1,0 +1,9 @@
+﻿TargetClass,Scenario,ParameterRules,AcceptanceRule
+Caution,AMMONIUM_NEAR_STANDARD,Amonyum 0.16-0.34 mg/L; Oksitlenebilirlik 1.0-3.5 mg/L O2,Central HF calculator must return Caution (60 <= HF < 85)
+Caution,NITRITE_SUBSTANDARD,Nitrit 0.12-0.30 mg/L; Arsenik 2.0-8.5 ug/L,No fail-fast; central HF calculator must return Caution
+Caution,MULTI_PARAMETER_SUBSTANDARD,"Sub-standard Amonyum, Nitrit, Oksitlenebilirlik, Arsenik and pH perturbation",Central HF calculator must return Caution
+Risk,E_COLI_FAIL_FAST,E.coli 1-5 count/100 mL,Zero standard exceeded; HF=0 and Risk
+Risk,COLIFORM_FAIL_FAST,Koliform Bakteri 1-20 count/100 mL,Zero standard exceeded; HF=0 and Risk
+Risk,C_PERFRINGENS_FAIL_FAST,C.Perfringens 1-5 count/100 mL,Zero standard exceeded; HF=0 and Risk
+Risk,ARSENIC_FAIL_FAST,Arsenik 10.1-25.0 ug/L,Sn=10 ug/L exceeded; HF=0 and Risk
+Risk,NITRITE_FAIL_FAST,Nitrit 0.51-1.50 mg/L,Sn=0.50 mg/L exceeded; HF=0 and Risk

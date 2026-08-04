@@ -1,0 +1,34 @@
+﻿Feature,Definition
+Alüminyum,Current raw or current HF feature
+Amonyum,Current raw or current HF feature
+Arsenik,Current raw or current HF feature
+Bulanıklık,Current raw or current HF feature
+C.Perfringens,Current raw or current HF feature
+Demir,Current raw or current HF feature
+E.coli,Current raw or current HF feature
+Klorür,Current raw or current HF feature
+Koku,Current raw or current HF feature
+Koliform Bakteri,Current raw or current HF feature
+Nitrit,Current raw or current HF feature
+Oksitlenebilirlik,Current raw or current HF feature
+Renk,Current raw or current HF feature
+Toplam Sertlik,Current raw or current HF feature
+Tuzluluk,Current raw or current HF feature
+pH,Current raw or current HF feature
+İletkenlik,Current raw or current HF feature
+HF_Current,Current raw or current HF feature
+HF_Lag1,Past-only engineered or calendar feature
+HF_Lag2,Past-only engineered or calendar feature
+HF_Lag3,Past-only engineered or calendar feature
+HF_PastMean3,Past-only engineered or calendar feature
+HF_PastStd3,Past-only engineered or calendar feature
+HF_PastMean7,Past-only engineered or calendar feature
+HF_PastStd7,Past-only engineered or calendar feature
+HF_ChangeFromPrevious,Past-only engineered or calendar feature
+HF_PreviousChange,Past-only engineered or calendar feature
+HF_DifferenceFromPastMean3,Past-only engineered or calendar feature
+PreviousGapDays,Past-only engineered or calendar feature
+MonthSin,Past-only engineered or calendar feature
+MonthCos,Past-only engineered or calendar feature
+Enlem,Past-only engineered or calendar feature
+Boylam,Past-only engineered or calendar feature

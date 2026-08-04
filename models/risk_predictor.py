@@ -1,90 +1,211 @@
-import pandas as pd
-import numpy as np
+"""
+risk_predictor.py
+
+Inference utility for the new Reactive Layer model bundle.
+
+The saved bundle contains one fitted sklearn Pipeline. Missing-value imputation
+and scaling therefore use the transformations learned from training data; the
+prediction file's own median is never fitted during inference.
+"""
+
+from __future__ import annotations
+
+import argparse
 from pathlib import Path
+
 import joblib
-from datetime import datetime
+import numpy as np
+import pandas as pd
 
 
-class RiskClassifierDeployer:
-    def __init__(self, model_path):
-        self.model_path = Path(model_path)
-        if not self.model_path.exists():
-            raise FileNotFoundError(f"Model dosyası bulunamadı: {self.model_path}")
+DATE_COL = "Tarih"
+LOCATION_ID_COL = "NoktaId"
+LOCATION_NAME_COL = "NoktaAdi"
 
-        print(f"[Deployer] Model yükleniyor: {self.model_path}")
-        bundle = joblib.load(self.model_path)
 
-        self.model = bundle["model"]
-        self.scaler = bundle["scaler"]
-        self.feature_cols = bundle["feature_cols"]
-        self.model_name = bundle.get("model_name", "UnknownModel")
+def resolve_existing_path(
+    path_text: str,
+    project_root: Path,
+    models_dir: Path,
+    resource_name: str,
+) -> Path:
+    path = Path(path_text)
 
-        print(f"[Deployer] Model adı: {self.model_name}")
-        print(f"[Deployer] Feature sayısı: {len(self.feature_cols)}")
+    if path.is_absolute():
+        if path.exists():
+            return path
+        raise FileNotFoundError(f"{resource_name} bulunamadı: {path}")
 
-    def _prepare_features(self, df: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray]:
-        df = df.copy()
+    candidates = [
+        project_root / path,
+        models_dir / path,
+        project_root / "models" / path,
+    ]
 
-        if 'Tarih' not in df.columns:
-            raise ValueError("Girdi CSV'de 'Tarih' kolonu yok. Health factor pipeline ile aynı formatta olmalı.")
+    checked = []
+    for candidate in candidates:
+        candidate = candidate.resolve()
+        if candidate in checked:
+            continue
+        checked.append(candidate)
 
-        df['Tarih'] = pd.to_datetime(df['Tarih'])
-        df['Month'] = df['Tarih'].dt.month
-        df['DayOfWeek'] = df['Tarih'].dt.dayofweek
+        if candidate.exists():
+            return candidate
 
-        for col in self.feature_cols:
-            if col not in df.columns:
-                df[col] = 0.0
+    searched = "\n".join(f" - {candidate}" for candidate in checked)
+    raise FileNotFoundError(
+        f"{resource_name} bulunamadı. Kontrol edilen yollar:\n{searched}"
+    )
 
-            median_val = df[col].median()
-            df[col] = df[col].fillna(0.0 if pd.isna(median_val) else median_val)
 
-        X = df[self.feature_cols]
-        X_scaled = self.scaler.transform(X)
+def resolve_output_path(
+    path_text: str,
+    project_root: Path,
+    models_dir: Path,
+) -> Path:
+    path = Path(path_text)
 
-        return df, X_scaled
+    if path.is_absolute():
+        return path
 
-    def predict_csv(self, input_csv, output_csv=None, add_proba=False) -> pd.DataFrame:
-        input_csv = Path(input_csv)
-        print(f"\n[Predict] Girdi CSV: {input_csv}")
+    root_outputs = project_root / "outputs"
+    models_outputs = models_dir / "outputs"
 
-        if not input_csv.exists():
-            raise FileNotFoundError(f"Girdi CSV bulunamadı: {input_csv}")
+    if models_outputs.exists() and not root_outputs.exists():
+        return models_dir / path
 
-        df_new = pd.read_csv(input_csv)
-        df_prepared, X_scaled = self._prepare_features(df_new)
+    return project_root / path
 
-        preds = self.model.predict(X_scaled)
-        df_prepared['PredictedRiskClass'] = preds
 
-        if add_proba and hasattr(self.model, "predict_proba"):
-            proba = self.model.predict_proba(X_scaled)
-            class_labels = self.model.classes_
-            for i, cls in enumerate(class_labels):
-                df_prepared[f"Prob_{cls}"] = proba[:, i]
+def predict(
+    model_path: Path,
+    input_path: Path,
+    output_path: Path,
+    include_probabilities: bool,
+) -> pd.DataFrame:
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model dosyası bulunamadı: {model_path}")
+    if not input_path.exists():
+        raise FileNotFoundError(f"Girdi CSV bulunamadı: {input_path}")
 
-        if output_csv is not None:
-            output_csv = Path(output_csv)
-            output_csv.parent.mkdir(parents=True, exist_ok=True)
-            df_prepared.to_csv(output_csv, index=False, encoding="utf-8-sig")
-            print(f"[Predict] Tahminli CSV kaydedildi: {output_csv}")
+    bundle = joblib.load(model_path)
+    if "pipeline" not in bundle:
+        raise ValueError(
+            "Model paketi yeni Reactive Layer formatında değil: "
+            "'pipeline' anahtarı bulunamadı."
+        )
 
-        cols_to_show = ['Tarih', 'PredictedRiskClass']
-        if 'NoktaAdi' in df_prepared.columns:
-            cols_to_show.insert(1, 'NoktaAdi')
+    pipeline = bundle["pipeline"]
+    feature_columns = list(bundle["feature_columns"])
+    model_name = bundle.get("model_name", "Unknown")
+    class_labels = bundle.get("class_labels", [])
 
-        print("\n[Predict] Örnek sonuçlar:")
-        print(df_prepared[cols_to_show].head())
+    df = pd.read_csv(input_path, encoding="utf-8-sig")
 
-        return df_prepared
+    if DATE_COL in df.columns:
+        df[DATE_COL] = pd.to_datetime(
+            df[DATE_COL],
+            errors="coerce",
+        ).dt.strftime("%Y-%m-%d")
+
+    for column in feature_columns:
+        if column not in df.columns:
+            df[column] = np.nan
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+
+    predictions = pipeline.predict(df[feature_columns])
+    df["PredictedRiskClass"] = predictions
+    df["PredictionModel"] = model_name
+
+    if include_probabilities and hasattr(pipeline, "predict_proba"):
+        probabilities = pipeline.predict_proba(df[feature_columns])
+        learned_classes = pipeline.named_steps["model"].classes_
+        for class_index, class_label in enumerate(learned_classes):
+            df[f"Probability_{class_label}"] = probabilities[:, class_index]
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(
+        output_path,
+        index=False,
+        encoding="utf-8-sig",
+        float_format="%.6f",
+    )
+
+    show_columns = [
+        column
+        for column in [
+            DATE_COL,
+            LOCATION_ID_COL,
+            LOCATION_NAME_COL,
+            "PredictedRiskClass",
+            "PredictionModel",
+        ]
+        if column in df.columns
+    ]
+
+    print(f"[MODEL] {model_name}")
+    print(f"[ROWS] {len(df)}")
+    print(f"[OUTPUT] {output_path}")
+    print(df[show_columns].head().to_string(index=False))
+
+    return df
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Predict current Good/Caution/Risk classes."
+    )
+    parser.add_argument(
+        "--model",
+        default="outputs/reactive/best_reactive_model.joblib",
+    )
+    parser.add_argument(
+        "--input",
+        default="data/data/izsu_features.csv",
+    )
+    parser.add_argument(
+        "--output",
+        default="outputs/reactive/reactive_inference_predictions.csv",
+    )
+    parser.add_argument(
+        "--no-probabilities",
+        action="store_true",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    models_dir = Path(__file__).resolve().parent
+    project_root = (
+        models_dir.parent if models_dir.name == "models" else Path.cwd()
+    )
+
+    model_path = resolve_existing_path(
+        args.model,
+        project_root,
+        models_dir,
+        "Model dosyası",
+    )
+    input_path = resolve_existing_path(
+        args.input,
+        project_root,
+        models_dir,
+        "Girdi CSV",
+    )
+    output_path = resolve_output_path(
+        args.output,
+        project_root,
+        models_dir,
+    )
+
+    predict(
+        model_path,
+        input_path,
+        output_path,
+        include_probabilities=not args.no_probabilities,
+    )
 
 
 if __name__ == "__main__":
-    model_file = "ai_outputs/classification/best_model_SVM_20251203_185302.joblib"
-    input_file = "izsu_health_factor.csv"
-    output_file = "izsu_health_factor_class_predicted.csv"
-    try:
-        deployer = RiskClassifierDeployer(model_file)
-        deployer.predict_csv(input_file, output_file, add_proba=False)
-    except Exception as e:
-        print(f"[ERROR] {e}")
+    main()

@@ -1,0 +1,9 @@
+﻿Check,Pass,Evidence
+Future target columns excluded from model input,True,None
+Train and validation dates do not overlap,True,Unique-date split
+Train and test dates do not overlap,True,Unique-date split
+Validation and test dates do not overlap,True,Unique-date split
+Rolling statistics use only prior observations,True,group.shift(1).rolling(...)
+Imputer and scaler fit only inside training pipeline,True,SimpleImputer and StandardScaler are Pipeline steps.
+Test metrics excluded from model selection,True,"Selection uses validation MacroF1, MCC, minimum Drop/Rise recall, BalancedAccuracy."
+Last observation per location excluded from labels,True,Rows with missing NextHealthFactor/NextObservationDate are dropped.

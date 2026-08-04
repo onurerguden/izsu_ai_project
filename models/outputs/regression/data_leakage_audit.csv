@@ -1,0 +1,8 @@
+﻿Check,Pass,Evidence
+Future target fields excluded from X,True,None
+Train/validation dates do not overlap,True,Unique-date split
+Train/test dates do not overlap,True,Unique-date split
+Validation/test dates do not overlap,True,Unique-date split
+Rolling statistics use past observations only,True,group.shift(1).rolling(...)
+Imputer/scaler fitted through training pipeline,True,SimpleImputer + RobustScaler inside Pipeline
+Best model selected without test metrics,True,"Validation MAE, RMSE and R2"
