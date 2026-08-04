@@ -282,27 +282,14 @@ def main():
     feat_out_path = data_dir / "izsu_features.csv"
     state = data_dir / STATE_NAME
 
+    # Başlangıç tarihi yalnızca state dosyasından okunur.
+    # Mevcut HF veya features CSV dosyalarındaki maksimum tarihler
+    # artık başlangıç tarihini değiştirmez.
     last_date = read_state_date(state)
-    if hf_out_path.exists():
-        try:
-            tmp = pd.read_csv(hf_out_path, encoding="utf-8-sig")
-            dmax = pd.to_datetime(tmp["Tarih"], errors="coerce").dt.date.max()
-            if pd.notna(dmax):
-                last_date = max(last_date or dmax, dmax)
-        except Exception:
-            pass
-    if feat_out_path.exists():
-        try:
-            tmp = pd.read_csv(feat_out_path, encoding="utf-8-sig")
-            dmax2 = pd.to_datetime(tmp["Tarih"], errors="coerce").dt.date.max()
-            if pd.notna(dmax2):
-                last_date = max(last_date or dmax2, dmax2)
-        except Exception:
-            pass
 
     print(f"[i] Girdi: {in_path}")
     if last_date:
-        print(f"[i] Son HF tarihi (state): {last_date}")
+        print(f"[i] Başlangıç için kullanılan son tarih (yalnızca state): {last_date}")
 
     raw = pd.read_csv(in_path, encoding="utf-8-sig")
 
@@ -360,14 +347,14 @@ def main():
     if hf_out_path.exists():
         base = pd.read_csv(hf_out_path, encoding="utf-8-sig")
         hf_all = pd.concat([base, hf_new], ignore_index=True)
-        hf_all = hf_all.drop_duplicates(subset=["Tarih", "NoktaAdi"])
+        hf_all = hf_all.drop_duplicates(subset=["Tarih", "NoktaAdi"], keep="last")
     else:
         hf_all = hf_new
 
     if feat_out_path.exists():
         base = pd.read_csv(feat_out_path, encoding="utf-8-sig")
         features_all = pd.concat([base, features_new], ignore_index=True)
-        features_all = features_all.drop_duplicates(subset=["Tarih", "NoktaAdi"])
+        features_all = features_all.drop_duplicates(subset=["Tarih", "NoktaAdi"], keep="last")
     else:
         features_all = features_new
 

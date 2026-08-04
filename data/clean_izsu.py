@@ -101,14 +101,21 @@ def clean_dataframe_lossless(df: pd.DataFrame) -> pd.DataFrame:
     out["Tarih_Clean"] = prefer_measure_date(out)  # NaT olabilir, satır korunur
 
     # Nokta adı temiz varyant (hem NoktaTanimi hem NoktaAdi varsa tercih sırası)
+    # Öncelikle gerçek nokta adı, yoksa nokta tanımı/adres kullanılır.
     pt = None
-    if "NoktaTanimi" in out.columns:
-        pt = out["NoktaTanimi"].astype(str).map(normalize_whitespace)
-    elif "NoktaAdi" in out.columns:
-        pt = out["NoktaAdi"].astype(str).map(normalize_whitespace)
-    if pt is not None:
-        out["NoktaAdi_Clean"] = pt.apply(lambda s: " ".join([w if (w.isupper() and len(w) > 2) else w.capitalize() for w in s.strip(" .").split()]))
 
+    if "NoktaAdi" in out.columns:
+        pt = out["NoktaAdi"].astype(str).map(normalize_whitespace)
+    elif "NoktaTanimi" in out.columns:
+        pt = out["NoktaTanimi"].astype(str).map(normalize_whitespace)
+
+    if pt is not None:
+        out["NoktaAdi_Clean"] = pt.apply(
+            lambda s: " ".join(
+                w if (w.isupper() and len(w) > 2) else w.capitalize()
+                for w in s.strip(" .").split()
+            )
+        )
     # Parametre adı + birim normalize
     if "ParametreAdi" in out.columns:
         out["ParametreAdiRaw"]  = out["ParametreAdi"].astype(str).map(normalize_whitespace)
