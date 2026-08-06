@@ -1,0 +1,4 @@
+﻿Split,Model,Rows,R2,RMSE,MAE,MedAE,MAPE
+Train,Persistence Baseline,1063,-0.191248,0.573694,0.432674,0.332677,0.004834
+Validation,Persistence Baseline,184,-0.139118,0.570088,0.421760,0.290236,0.004711
+Test,Persistence Baseline,234,0.325298,0.400695,0.265492,0.180312,0.002953

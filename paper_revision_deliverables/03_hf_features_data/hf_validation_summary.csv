@@ -1,0 +1,18 @@
+﻿Metric,Value
+Cleaned parameter rows,26469
+HF date-location observations,1557
+HF study start,2025-08-06
+HF study end,2026-07-29
+Unique locations,75
+Minimum HF,88.16804209894539
+Mean HF,89.6129954305217
+Maximum HF,90.67382554755304
+Good observations,1557
+Caution observations,0
+Risk observations,0
+Unknown observations,0
+Fail-fast observations,0
+WAWQI proportionality constant K,0.22626158697495402
+WAWQI parameter count,9
+Formula checks passed,8
+Formula checks total,8

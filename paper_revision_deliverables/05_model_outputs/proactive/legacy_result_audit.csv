@@ -1,0 +1,5 @@
+﻿LegacyStatement,CurrentOutput,CurrentMetric,Status
+54/74 correctly predicted Drop events,76/82,0.926829,NOT_REPRODUCED_WITH_CURRENT_DATA
+59/74 correctly predicted Drop events,76/82,0.926829,NOT_REPRODUCED_WITH_CURRENT_DATA
+Approximately 80% Drop recall,76/82,0.926829,USE_CURRENT_CODE_OUTPUT
+51/60 correctly predicted Rise events,62/116,0.534483,NOT_REPRODUCED_WITH_CURRENT_DATA

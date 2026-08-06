@@ -1,0 +1,13 @@
+Model,Class,Precision,Recall,F1,Support
+KNN,Good,0.847273,0.995726,0.915521,234
+KNN,Caution,0.947368,0.769231,0.849057,117
+KNN,Risk,1.0,0.837607,0.911628,117
+SVM,Good,0.966942,1.0,0.983193,234
+SVM,Caution,1.0,0.974359,0.987013,117
+SVM,Risk,1.0,0.957265,0.978166,117
+Decision Tree,Good,1.0,1.0,1.0,234
+Decision Tree,Caution,1.0,1.0,1.0,117
+Decision Tree,Risk,1.0,1.0,1.0,117
+Random Forest,Good,1.0,1.0,1.0,234
+Random Forest,Caution,1.0,1.0,1.0,117
+Random Forest,Risk,1.0,1.0,1.0,117

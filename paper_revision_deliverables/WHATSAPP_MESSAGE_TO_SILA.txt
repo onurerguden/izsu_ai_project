@@ -1,0 +1,24 @@
+Sıla, B-I-K-L de bitti, teknik kısım tamamen kapandı 🙌
+
+Ne yaptık özetle:
+- B: sentetik veri üretim kodunu satır satır çıkardım, hangi parametre hangi aralıkta üretiliyor, test setinde sentetik veri var mı (var, mixed testte %50) hepsi tek raporda
+- I: makaledeki 54/74, 59/74, %96.3, 0.941/0.939 gibi sayıların hangi çıktıdan geldiğini tek tek kontrol ettim - çoğu güncel kodda üretilemiyor, doğrusunu bulup tabloya yazdım
+- K: bütün grafikler zaten 300 DPI'ymış, sadece Figure 6 eksikti (metinde var ama dosyası yoktu) onu da üretip ekledim
+- L: her şeyi tek klasörde topladım
+
+Bonus: Cem'in Proactive raporunu kontrol ederken Random Forest ile XGBoost'un Drop/Rise recall sayılarının satırda birbirine karıştığını (75/82, 64/116 yazılmış ama kod çıktısı 76/82, 62/116 diyor) fark ettim, teslim klasöründeki kopyada direkt düzelttim ve dosyanın sonuna tarihli bir düzeltme notu ekledim. Cem'in Downloads'daki orijinal dosyasına dokunmadım, sadece teslim kopyasını güncelledim - o yüzden Cem'e de haber ver, kendi orijinalini de düzeltmek isteyebilir.
+
+En kritik bulgu: makale proaktif katmanda "Extra Trees" şampiyon model diyor ama güncel kod Random Forest seçiyor (validation'a göre otomatik seçim kuralı böyle). Doğru sayılar: Drop recall 76/82 (%92.7), Rise recall 62/116 (%53.4) - Rise düşük çıktı, bunu Discussion'da dürüstçe belirtmemiz lazım, saklamayalım.
+
+Her şey şurada: izsu_ai_project/paper_revision_deliverables/
+
+Sen direkt şunlara bak, en hızlısı bu:
+1. 09_paper_change_map/Change_Map.docx -> hangi paragraf/Figure'a ne yazılacak, satır satır (Cem'in A-H'si de dahil, tek dosyada hepsi var, düzeltmeler de işlenmiş halde)
+2. 06_tables/ -> tablolar direkt makaleye yapıştırılabilir halde
+3. 07_figures_300dpi/ -> Figure 1'den 11'e kadar hepsi numaralı, direkt kullan
+
+Terimler/yazım hatası kısmına (security/safety standards, standart/standard, Inddustrial, matricies, Extreme/Extra Trees vb.) ve özet-tartışma-sonuç yeniden yazımına ben ve Cem dokunmadık, o senin tarafın - Change_Map.docx'in sonunda "henüz karar bekleyen konu" diye not düştüm.
+
+Bitince hocaya Mirkan'ın istediği formatta (nereye ait değişiklik yaptığımızı gösteren dosya) zaten Change_Map.docx var, direkt onu da ekleyebilirsin gönderirken.
+
+10 Ağustos'a yetişiriz, iyi çalışmalar ✌️

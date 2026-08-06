@@ -1,0 +1,5 @@
+Model,Accuracy,Balanced Accuracy,Precision (macro),Recall (macro),F1-score (macro),MCC,Risk Recall
+KNN,0.8996,0.8675,0.9315,0.8675,0.8921,0.8424,0.8376
+SVM,0.9829,0.9772,0.989,0.9772,0.9828,0.9728,0.9573
+Decision Tree,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+Random Forest,1.0,1.0,1.0,1.0,1.0,1.0,1.0

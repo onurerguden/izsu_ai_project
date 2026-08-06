@@ -1,0 +1,77 @@
+﻿Tarih,NoktaId,NoktaAdi,HealthFactor,PredictedNextHealthFactor,BestModel,ForecastMeaning
+2026-07-01,66.000000,KOZAĞAÇ,90.455477,90.029678,XGBoost,Next available observation; date unknown
+2026-07-01,69.000000,UĞUR MUMCU MAH,90.018328,89.957321,XGBoost,Next available observation; date unknown
+2026-07-29,14.000000,ESKİ İZMİR,90.196727,89.939682,XGBoost,Next available observation; date unknown
+2026-07-01,74.000000,UZUNDERE,90.372471,89.935974,XGBoost,Next available observation; date unknown
+2026-07-01,64.000000,ADATEPE,90.369527,89.932343,XGBoost,Next available observation; date unknown
+2026-07-01,65.000000,KURUÇEŞME,90.390285,89.920685,XGBoost,Next available observation; date unknown
+2026-07-01,63.000000,EVKA-1,90.343535,89.891014,XGBoost,Next available observation; date unknown
+2026-07-01,71.000000,AKTEPE,90.161013,89.883408,XGBoost,Next available observation; date unknown
+2026-07-01,68.000000,AKINCILAR,90.358418,89.882111,XGBoost,Next available observation; date unknown
+2026-07-22,73.000000,BEYAZEVLER,90.247107,89.879700,XGBoost,Next available observation; date unknown
+2026-07-08,13.000000,KARABAĞLAR,90.204064,89.867409,XGBoost,Next available observation; date unknown
+2026-07-22,70.000000,ÇAMLIK MAH,90.609129,89.864616,XGBoost,Next available observation; date unknown
+2026-07-29,15.000000,GAZİEMİR,90.191809,89.829849,XGBoost,Next available observation; date unknown
+2026-07-29,20.000000,GÜLTEPE,90.037716,89.826370,XGBoost,Next available observation; date unknown
+2026-07-22,75.000000,CENNETÇEŞME,90.250829,89.801788,XGBoost,Next available observation; date unknown
+2026-07-22,67.000000,ÇAMLIKULE,90.588871,89.801743,XGBoost,Next available observation; date unknown
+2026-07-08,18.000000,BUCA,90.441345,89.785965,XGBoost,Next available observation; date unknown
+2026-07-01,79.000000,ESENDERE,90.386467,89.778458,XGBoost,Next available observation; date unknown
+2026-07-22,80.000000,KADİFEKALE,90.627083,89.749626,XGBoost,Next available observation; date unknown
+2026-07-22,72.000000,9 EYLÜL MAH,90.249856,89.748962,XGBoost,Next available observation; date unknown
+2026-07-29,23.000000,IŞIKKENT,90.293613,89.736237,XGBoost,Next available observation; date unknown
+2026-07-29,8.000000,GÜZELYALI,89.800038,89.705704,XGBoost,Next available observation; date unknown
+2026-07-08,11.000000,YEŞİLYURT,90.207656,89.702980,XGBoost,Next available observation; date unknown
+2026-07-08,9.000000,HATAY,90.219082,89.684692,XGBoost,Next available observation; date unknown
+2026-07-08,6.000000,BALÇOVA,89.894872,89.662163,XGBoost,Next available observation; date unknown
+2026-07-29,21.000000,ALTINDAĞ,90.286260,89.657547,XGBoost,Next available observation; date unknown
+2026-07-29,22.000000,ÇAMDİBİ,90.114344,89.652718,XGBoost,Next available observation; date unknown
+2026-07-01,76.000000,GÜZELBAHÇE,89.611917,89.621681,XGBoost,Next available observation; date unknown
+2025-11-05,10.000000,HALİL RIFAT PAŞA,89.403838,89.608604,XGBoost,Next available observation; date unknown
+2026-07-29,26.000000,BORNOVA,90.286403,89.587326,XGBoost,Next available observation; date unknown
+2026-07-08,24.000000,PINARBAŞI,90.063102,89.582031,XGBoost,Next available observation; date unknown
+2026-07-29,25.000000,EVKA-3,90.273312,89.572929,XGBoost,Next available observation; date unknown
+2026-07-22,60.000000,TOROS,89.081441,89.555603,XGBoost,Next available observation; date unknown
+2026-07-29,4.000000,GÜZELBAHÇE,89.786163,89.553978,XGBoost,Next available observation; date unknown
+2026-07-22,52.000000,İZYUVA,90.298684,89.529037,XGBoost,Next available observation; date unknown
+2026-07-01,56.000000,YEŞİLOVA,90.059599,89.528824,XGBoost,Next available observation; date unknown
+2026-07-22,54.000000,YEŞİLÇAM,90.323842,89.523193,XGBoost,Next available observation; date unknown
+2026-07-01,53.000000,NALDÖKEN,90.021296,89.501198,XGBoost,Next available observation; date unknown
+2026-07-29,5.000000,NARLIDERE,89.807076,89.488441,XGBoost,Next available observation; date unknown
+2026-07-29,7.000000,ÜÇKUYULAR,89.819160,89.469757,XGBoost,Next available observation; date unknown
+2026-07-22,78.000000,İNCİRALTI,89.776903,89.434776,XGBoost,Next available observation; date unknown
+2026-07-22,55.000000,MEVLANA,90.203919,89.432365,XGBoost,Next available observation; date unknown
+2026-07-22,62.000000,UFUK MAH,89.115137,89.420036,XGBoost,Next available observation; date unknown
+2026-07-29,16.000000,GEDİZ,90.298275,89.409081,XGBoost,Next available observation; date unknown
+2026-07-29,32.000000,EGEKENT,89.315416,89.394417,XGBoost,Next available observation; date unknown
+2026-07-29,19.000000,GÜLÇEŞME,90.319854,89.391174,XGBoost,Next available observation; date unknown
+2026-07-29,2.000000,YENİŞEHİR,89.630209,89.377769,XGBoost,Next available observation; date unknown
+2026-07-29,17.000000,ŞİRİNYER,90.313001,89.366035,XGBoost,Next available observation; date unknown
+2026-07-01,61.000000,LEVENT,88.669362,89.340057,XGBoost,Next available observation; date unknown
+2026-07-22,47.000000,EVKA-5,89.201736,89.327972,XGBoost,Next available observation; date unknown
+2026-07-29,3.000000,KONAK,89.614325,89.326889,XGBoost,Next available observation; date unknown
+2026-07-22,48.000000,EGEKENT-2,89.213357,89.320709,XGBoost,Next available observation; date unknown
+2026-07-08,37.000000,KARŞIYAKA,89.465697,89.319351,XGBoost,Next available observation; date unknown
+2026-07-29,33.000000,BALATÇIK,89.297267,89.310776,XGBoost,Next available observation; date unknown
+2026-07-01,49.000000,ALAYBEY,89.375398,89.306404,XGBoost,Next available observation; date unknown
+2026-07-22,57.000000,MERSİNLİ,89.328785,89.275024,XGBoost,Next available observation; date unknown
+2026-07-29,40.000000,GÜMÜŞPALA,89.218378,89.265717,XGBoost,Next available observation; date unknown
+2026-07-29,39.000000,ÖRNEKKÖY,89.454838,89.258804,XGBoost,Next available observation; date unknown
+2026-07-29,27.000000,ATATÜRK MAH,89.488579,89.232773,XGBoost,Next available observation; date unknown
+2026-07-08,36.000000,ŞEMİKLER,89.456349,89.226868,XGBoost,Next available observation; date unknown
+2026-07-29,34.000000,ÇİĞLİ,89.493153,89.218430,XGBoost,Next available observation; date unknown
+2026-07-01,50.000000,CENGİZHAN,89.391891,89.210190,XGBoost,Next available observation; date unknown
+2026-07-22,43.000000,POSTACI MAH,89.324150,89.206352,XGBoost,Next available observation; date unknown
+2026-07-29,29.000000,ÖZKANLAR,89.591852,89.180458,XGBoost,Next available observation; date unknown
+2026-07-29,30.000000,MANAVKUYU,89.485632,89.174202,XGBoost,Next available observation; date unknown
+2026-07-01,45.000000,CUMHURİYET MAH,89.397496,89.161751,XGBoost,Next available observation; date unknown
+2026-07-29,35.000000,BOSTANLI,89.510151,89.139442,XGBoost,Next available observation; date unknown
+2026-07-29,28.000000,OSMANGAZİ,89.499949,89.134300,XGBoost,Next available observation; date unknown
+2026-07-22,51.000000,ÇAY MAH,89.322847,89.106636,XGBoost,Next available observation; date unknown
+2026-07-22,46.000000,GÜZELTEPE,89.194344,89.092720,XGBoost,Next available observation; date unknown
+2026-07-22,42.000000,YAMANLAR,89.437806,89.038101,XGBoost,Next available observation; date unknown
+2026-07-29,38.000000,EVKA-2,89.468740,89.026688,XGBoost,Next available observation; date unknown
+2026-07-22,59.000000,ÇANKAYA,89.354005,89.024460,XGBoost,Next available observation; date unknown
+2026-07-22,44.000000,YAMAÇ MAH,89.438888,89.001114,XGBoost,Next available observation; date unknown
+2025-10-08,58.000000,KAHRAMANLAR,89.564210,88.999626,XGBoost,Next available observation; date unknown
+2026-07-22,41.000000,DOĞANÇAY,89.329287,88.987305,XGBoost,Next available observation; date unknown

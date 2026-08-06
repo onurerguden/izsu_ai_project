@@ -1,0 +1,14 @@
+﻿RecordType,Parameter,RealMean,RealStd,SyntheticMean,SyntheticStd,StandardizedMeanDifference,Note
+PARAMETER,E.coli,0.000000,0.000000,0.292727,0.977333,0.423580,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Koliform Bakteri,0.000000,0.000000,0.951818,3.429048,0.392550,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,C.Perfringens,0.000000,0.000000,0.307273,1.022113,0.425148,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Arsenik,3.466966,2.092766,5.610221,4.512021,0.609406,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Nitrit,0.065000,0.000000,0.196709,0.291727,0.638490,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Amonyum,0.030000,0.000000,0.085782,0.089459,0.881831,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Alüminyum,12.315332,12.041897,12.494382,11.988506,0.014902,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Demir,51.051353,30.216073,51.808491,30.842204,0.024799,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Klorür,35.794732,10.735904,35.850000,10.839311,0.005123,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,İletkenlik,552.773842,90.140863,555.310909,92.054419,0.027848,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,Oksitlenebilirlik,0.492643,0.102649,1.204773,1.183886,0.847496,Controlled scenario variable; exact distribution equality is not expected.
+PARAMETER,pH,7.562670,0.188766,7.600398,0.480537,0.103345,Controlled scenario variable; exact distribution equality is not expected.
+SUMMARY,__PAIRWISE_CORRELATION_MAD__,,,,,0.157389,Mean absolute difference between real and synthetic pairwise correlations. The generator is a conditional bootstrap and does not claim exact covariance preservation.

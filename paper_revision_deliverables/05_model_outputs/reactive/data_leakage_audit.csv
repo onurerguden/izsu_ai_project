@@ -1,0 +1,10 @@
+﻿Check,Pass,Evidence
+Target-derived columns excluded from X,True,None
+Train/validation dates do not overlap,True,False
+Train/test dates do not overlap,True,False
+Validation/test dates do not overlap,True,False
+Synthetic train generated only from real train,True,TRAIN
+Synthetic validation generated only from real validation,True,VALIDATION
+Synthetic test generated only from real test,True,TEST
+Imputer/scaler fitted inside training pipeline,True,SimpleImputer + StandardScaler are pipeline steps fit only with augmented training rows.
+Test set excluded from model selection,True,"Best model is selected using mixed validation MacroF1, MCC and BalancedAccuracy."

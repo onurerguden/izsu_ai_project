@@ -1,0 +1,4 @@
+﻿Class,Count,Percent,Threshold,Definition
+Drop,659,44.4970,0.0500,FutureDeltaHF < -0.05
+Stable,139,9.3856,0.0500,-0.05 <= FutureDeltaHF <= 0.05
+Rise,683,46.1175,0.0500,FutureDeltaHF > 0.05
